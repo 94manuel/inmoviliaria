@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: inmobiliaria_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-inmobiliaria}
+      POSTGRES_USER: ${POSTGRES_USER:-inmobiliaria}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-inmobiliaria_segura}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - inmobiliaria_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-inmobiliaria} -d ${POSTGRES_DB:-inmobiliaria}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: inmobiliaria_api
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-inmobiliaria}:${POSTGRES_PASSWORD:-inmobiliaria_segura}@postgres:5432/${POSTGRES_DB:-inmobiliaria}?schema=public
+      PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
+      WEB_ORIGIN: http://localhost:${WEB_HOST_PORT:-3000}
+    ports:
+      - "${API_HOST_PORT:-4000}:4000"
+    volumes:
+      - uploads:/app/apps/api/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "mkdir -p apps/api/uploads/seed && cp -rn seed-assets/. apps/api/uploads/seed/ && npm run db:migrate -w @inmobiliaria/api && npm run db:seed -w @inmobiliaria/api && npm run start:prod -w @inmobiliaria/api"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: inmobiliaria_web
+    env_file: .env
+    environment:
+      PORT: 3000
+      API_INTERNAL_URL: http://api:4000
+      NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
+    ports:
+      - "${WEB_HOST_PORT:-3000}:3000"
+    depends_on:
+      - api
+
+volumes:
+  inmobiliaria_db:
+  uploads:

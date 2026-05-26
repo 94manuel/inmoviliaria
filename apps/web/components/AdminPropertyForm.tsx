@@ -1,0 +1,30 @@
+'use client';
+
+import { useActionState } from 'react';
+import { createPropertyAction, type ActionState } from '@/app/actions';
+
+export function AdminPropertyForm() {
+  const [state, action, pending] = useActionState<ActionState, FormData>(createPropertyAction, {});
+  return (
+    <form className="form adminForm card" action={action}>
+      <h2>Publicar inmueble</h2>
+      <div className="twoCols"><label>Título<input name="title" required /></label><label>Ciudad<input name="city" defaultValue="Bogotá" required /></label></div>
+      <div className="twoCols"><label>Barrio<input name="neighborhood" required /></label><label>Dirección<input name="address" required /></label></div>
+      <label>Descripción<textarea name="description" rows={4} required minLength={30} /></label>
+      <div className="threeCols">
+        <label>Canon mensual<input name="monthlyRent" type="number" min="1" required /></label>
+        <label>Administración<input name="administrationFee" type="number" min="0" defaultValue="0" required /></label>
+        <label>Depósito<input name="deposit" type="number" min="0" defaultValue="0" required /></label>
+      </div>
+      <div className="fourCols">
+        <label>Habitaciones<input name="bedrooms" type="number" min="0" required /></label><label>Baños<input name="bathrooms" type="number" min="0" required /></label><label>Área m²<input name="areaM2" type="number" min="1" required /></label><label>Parqueaderos<input name="parking" type="number" min="0" defaultValue="0" required /></label>
+      </div>
+      <label>Características <span className="hint">separadas por coma</span><input name="features" placeholder="Balcón, vigilancia, pet friendly" /></label>
+      <label>Fotografías <span className="hint">JPG, PNG o WEBP; máximo 10 archivos de 5 MB</span><input type="file" accept="image/jpeg,image/png,image/webp" name="photos" multiple /></label>
+      <input type="hidden" name="published" value="true" />
+      {state.error && <p className="alert error">{state.error}</p>}
+      {state.success && <p className="alert success">{state.success}</p>}
+      <button className="button" disabled={pending}>{pending ? 'Publicando…' : 'Publicar inmueble'}</button>
+    </form>
+  );
+}

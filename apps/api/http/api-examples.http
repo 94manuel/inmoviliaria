@@ -1,0 +1,31 @@
+@api = http://localhost:4000/api
+@token = pegue_aqui_el_token
+
+### Login usuario
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "cliente@inmobiliariaraiz.co",
+  "password": "Cliente123*"
+}
+
+### Catálogo público
+GET {{api}}/properties
+
+### Mis facturas
+GET {{api}}/invoices/me
+Authorization: Bearer {{token}}
+
+### Login administrador
+POST {{api}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@inmobiliariaraiz.co",
+  "password": "Admin123*"
+}
+
+### Dashboard administrativo
+GET {{api}}/admin/dashboard
+Authorization: Bearer {{token}}

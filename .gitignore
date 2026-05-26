@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+.env
+.env.local
+coverage
+apps/api/src/generated/prisma
+apps/api/uploads/*
+!apps/api/uploads/seed
+.DS_Store

@@ -1,0 +1,157 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  RENTED
+  ARCHIVED
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  ERROR
+  VOIDED
+}
+
+enum PaymentProvider {
+  MOCK
+  WOMPI
+}
+
+enum ContactStatus {
+  NEW
+  REVIEWED
+  CLOSED
+}
+
+model User {
+  id            String           @id @default(cuid())
+  name          String
+  email         String           @unique
+  phone         String?
+  passwordHash  String
+  role          UserRole         @default(USER)
+  properties    Property[]       @relation("PropertyCreator")
+  leases        Lease[]
+  invoices      Invoice[]
+  payments      Payment[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+model Property {
+  id                String         @id @default(cuid())
+  title             String
+  slug              String         @unique
+  description       String
+  monthlyRent       Int
+  administrationFee Int            @default(0)
+  deposit           Int            @default(0)
+  city              String
+  neighborhood      String
+  address           String
+  bedrooms          Int
+  bathrooms         Int
+  areaM2            Float
+  parking           Int            @default(0)
+  features          String[]
+  status            PropertyStatus @default(AVAILABLE)
+  published         Boolean        @default(true)
+  images            PropertyImage[]
+  leases            Lease[]
+  createdById       String
+  createdBy         User           @relation("PropertyCreator", fields: [createdById], references: [id])
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  url        String
+  alt        String
+  sortOrder  Int      @default(0)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model Lease {
+  id         String    @id @default(cuid())
+  propertyId String
+  userId     String
+  startDate  DateTime
+  endDate    DateTime
+  active     Boolean   @default(true)
+  property   Property  @relation(fields: [propertyId], references: [id])
+  user       User      @relation(fields: [userId], references: [id])
+  invoices   Invoice[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  period      DateTime
+  dueDate     DateTime
+  amount      Int
+  status      InvoiceStatus @default(PENDING)
+  paidAt      DateTime?
+  leaseId     String
+  userId      String
+  lease       Lease         @relation(fields: [leaseId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
+  payments    Payment[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Payment {
+  id          String          @id @default(cuid())
+  reference   String          @unique
+  amount      Int
+  currency    String          @default("COP")
+  provider    PaymentProvider
+  status      PaymentStatus   @default(PENDING)
+  externalId  String?
+  checkoutUrl String?
+  invoiceId   String
+  userId      String
+  invoice     Invoice         @relation(fields: [invoiceId], references: [id])
+  user        User            @relation(fields: [userId], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
