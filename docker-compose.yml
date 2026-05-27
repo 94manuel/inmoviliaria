@@ -16,6 +16,19 @@ services:
       timeout: 5s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    container_name: inmobiliaria_minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY:-minioadmin}
+    ports:
+      - "${MINIO_API_HOST_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+
   api:
     build:
       context: .
@@ -25,6 +38,9 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-inmobiliaria}:${POSTGRES_PASSWORD:-inmobiliaria_segura}@postgres:5432/${POSTGRES_DB:-inmobiliaria}?schema=public
       PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
+      STORAGE_ENDPOINT: minio
+      STORAGE_PORT: 9000
+      STORAGE_USE_SSL: false
       WEB_ORIGIN: http://localhost:${WEB_HOST_PORT:-3000}
     ports:
       - "${API_HOST_PORT:-4000}:4000"
@@ -33,6 +49,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_started
     command: sh -c "mkdir -p apps/api/uploads/seed && cp -rn seed-assets/. apps/api/uploads/seed/ && npm run db:migrate -w @inmobiliaria/api && npm run db:seed -w @inmobiliaria/api && npm run start:prod -w @inmobiliaria/api"
 
   web:
@@ -53,3 +71,4 @@ services:
 volumes:
   inmobiliaria_db:
   uploads:
+  minio_data:

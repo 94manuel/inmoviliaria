@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { apiFetch, fecha, pesos } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { fecha, pesos } from '@/lib/format';
 import { requireUser } from '@/lib/auth';
 import type { Invoice } from '@/lib/types';
 

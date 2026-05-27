@@ -2,8 +2,6 @@ import { cookies } from 'next/headers';
 import type { User } from './types';
 
 const internalApi = () => process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-export const publicApiUrl = () => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-export const assetUrl = (path?: string) => path ? `${publicApiUrl()}${path}` : '/property-placeholder.svg';
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}, authenticated = false): Promise<T> {
   const headers = new Headers(init.headers);
@@ -28,6 +26,3 @@ export async function getCurrentUser(): Promise<User | null> {
     return null;
   }
 }
-
-export const pesos = (amount: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount);
-export const fecha = (value: string) => new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(value));

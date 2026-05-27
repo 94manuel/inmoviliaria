@@ -30,6 +30,18 @@ En endpoints privados enviar `Authorization: Bearer <jwt>`.
 
 Campos del formulario administrativo: `title`, `description`, `monthlyRent`, `administrationFee`, `deposit`, `city`, `neighborhood`, `address`, `bedrooms`, `bathrooms`, `areaM2`, `parking`, `features`, `published`, `photos`.
 
+Las fotos nuevas quedan publicadas bajo rutas del tipo `GET /files/:id/content`.
+
+## Archivos
+
+- `GET /admin/files` — administrador, lista archivos almacenados.
+- `POST /admin/files` — administrador, `multipart/form-data`; campo de archivos `files`, campo opcional `folder`.
+- `GET /files/:id` — público, devuelve metadatos del archivo.
+- `GET /files/:id/content` — público, entrega el contenido.
+- `GET /files/:id/content?download=1` — público, fuerza descarga.
+
+Los uploads usan un backend S3-compatible, con MinIO por defecto en Docker Compose.
+
 ## Contactos
 
 - `POST /contacts` — público.

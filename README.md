@@ -11,7 +11,8 @@ Plataforma web para publicar inmuebles en arriendo, recibir contactos, administr
 - Panel administrativo: indicadores, publicación de inmuebles con múltiples fotografías, mensajes y facturas.
 - Cuenta del usuario: contratos, facturas pagadas/pendientes y pago.
 - Pago local `mock` para desarrollo e integración preparada con **Wompi Checkout Web** y webhook verificado.
-- Docker Compose para frontend, API y PostgreSQL.
+- Docker Compose para frontend, API, PostgreSQL y MinIO.
+- Storage S3-compatible con MinIO y ruta pública estable vía API para archivos e imágenes.
 
 ## Inicio rápido con Docker
 
@@ -27,12 +28,13 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Si `5432`, `4000` o `3000` ya estan en uso en su equipo, ajuste `POSTGRES_HOST_PORT`, `API_HOST_PORT`, `WEB_HOST_PORT` y las URLs relacionadas en `.env` antes de iniciar.
+Si `5432`, `4000`, `3000`, `9000` o `9001` ya estan en uso en su equipo, ajuste `POSTGRES_HOST_PORT`, `API_HOST_PORT`, `WEB_HOST_PORT`, `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT` y las URLs relacionadas en `.env` antes de iniciar.
 
 3. Abra:
 
 - Sitio: `http://localhost:3000`
 - API: `http://localhost:4000/api`
+- Consola MinIO: `http://localhost:9001`
 
 ### Usuarios iniciales
 
@@ -56,6 +58,8 @@ npm run db:seed
 npm run dev
 ```
 
+Si ejecuta el backend sin Docker, debe tener un storage S3-compatible disponible. Para MinIO local use `STORAGE_ENDPOINT`, `STORAGE_PORT`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` y `STORAGE_BUCKET`. Para un storage externo futuro en InterServer u otro proveedor S3-compatible, solo cambie esas variables y, si aplica, `STORAGE_USE_SSL=true`.
+
 ## Módulos funcionales
 
 ### Sitio público
@@ -71,8 +75,16 @@ Ruta: `/admin`
 
 - Dashboard con total de inmuebles publicados, facturas pendientes, pagos recaudados y contactos nuevos.
 - Gestión de inmuebles con carga de hasta 10 imágenes por publicación.
+- Carga y publicación de archivos genéricos desde `/admin/archivos`.
 - Consulta de contactos recibidos.
 - Consulta y generación de facturas asociadas a contratos.
+
+## Storage de archivos
+
+- Las imágenes nuevas de inmuebles y los archivos genéricos se guardan en MinIO.
+- El acceso público a archivos se hace por rutas del API (`/api/files/:id/content`), por lo que el frontend no depende del host del bucket.
+- Para un proveedor externo S3-compatible en el futuro, cambie `STORAGE_ENDPOINT`, `STORAGE_PORT`, `STORAGE_USE_SSL`, `STORAGE_ACCESS_KEY`, `STORAGE_SECRET_KEY` y `STORAGE_BUCKET`.
+- Si el bucket ya existe y no desea que la app lo cree, use `STORAGE_AUTO_CREATE_BUCKET=false`.
 
 ### Cuenta del arrendatario
 
@@ -129,6 +141,9 @@ El backend valida el checksum dinámicamente con las propiedades enviadas por Wo
 | POST | `/api/payments/invoices/:id/intent` | Usuario | Iniciar pago |
 | GET | `/api/admin/dashboard` | Admin | Indicadores |
 | POST | `/api/admin/properties` | Admin | Crear inmueble y subir fotos |
+| GET | `/api/admin/files` | Admin | Listar archivos cargados |
+| POST | `/api/admin/files` | Admin | Subir archivos genéricos |
+| GET | `/api/files/:id/content` | Público | Abrir o descargar archivo |
 | GET | `/api/admin/invoices` | Admin | Consultar facturas |
 
 ## Estructura
@@ -141,7 +156,7 @@ apps/
 
 ## Consideraciones de producción
 
-- Reemplazar almacenamiento local de fotos por S3, Azure Blob o almacenamiento equivalente.
+- Reemplazar credenciales por secretos gestionados y exponer MinIO o el proveedor S3-compatible detrás de red privada o TLS.
 - Usar HTTPS, secreto JWT robusto y gestor de secretos.
 - Mantener `PAYMENT_PROVIDER=wompi` únicamente con llaves protegidas.
 - Configurar dominio del webhook en el dashboard del comercio y validar pagos desde el evento, no desde el navegador.

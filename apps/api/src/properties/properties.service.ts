@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { FilesService } from '../storage/files.service.js';
 import type { CreatePropertyDto } from './dto/create-property.dto.js';
 import type { SearchPropertiesDto } from './dto/search-properties.dto.js';
 
 @Injectable()
 export class PropertiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly files: FilesService,
+  ) {}
 
   async listPublished(query: SearchPropertiesDto) {
     return this.prisma.property.findMany({
@@ -57,47 +61,59 @@ export class PropertiesService {
     const features = dto.features
       ? dto.features.split(',').map((feature) => feature.trim()).filter(Boolean)
       : [];
-    return this.prisma.property.create({
-      data: {
-        title: dto.title.trim(),
-        slug,
-        description: dto.description.trim(),
-        monthlyRent: dto.monthlyRent,
-        administrationFee: dto.administrationFee,
-        deposit: dto.deposit,
-        city: dto.city.trim(),
-        neighborhood: dto.neighborhood.trim(),
-        address: dto.address.trim(),
-        bedrooms: dto.bedrooms,
-        bathrooms: dto.bathrooms,
-        areaM2: dto.areaM2,
-        parking: dto.parking,
-        features,
-        published: dto.published ?? true,
-        createdById: administratorId,
-        images: {
-          create: files.map((file, index) => ({
-            url: `/uploads/${file.filename}`,
-            alt: dto.title,
-            sortOrder: index,
-          })),
+    const uploadedFiles = await this.files.uploadPropertyImages(files, administratorId);
+    try {
+      return await this.prisma.property.create({
+        data: {
+          title: dto.title.trim(),
+          slug,
+          description: dto.description.trim(),
+          monthlyRent: dto.monthlyRent,
+          administrationFee: dto.administrationFee,
+          deposit: dto.deposit,
+          city: dto.city.trim(),
+          neighborhood: dto.neighborhood.trim(),
+          address: dto.address.trim(),
+          bedrooms: dto.bedrooms,
+          bathrooms: dto.bathrooms,
+          areaM2: dto.areaM2,
+          parking: dto.parking,
+          features,
+          published: dto.published ?? true,
+          createdById: administratorId,
+          images: {
+            create: uploadedFiles.map((file, index) => ({
+              url: file.publicPath,
+              alt: dto.title,
+              sortOrder: index,
+            })),
+          },
         },
-      },
-      include: { images: true },
-    });
+        include: { images: true },
+      });
+    } catch (error) {
+      await this.files.removeStoredFiles(uploadedFiles);
+      throw error;
+    }
   }
 
   async addImages(propertyId: string, files: Express.Multer.File[]) {
     const property = await this.prisma.property.findUnique({ where: { id: propertyId }, include: { images: true } });
     if (!property) throw new NotFoundException('Inmueble no encontrado.');
-    await this.prisma.propertyImage.createMany({
-      data: files.map((file, index) => ({
-        propertyId,
-        url: `/uploads/${file.filename}`,
-        alt: property.title,
-        sortOrder: property.images.length + index,
-      })),
-    });
+    const uploadedFiles = await this.files.uploadPropertyImages(files);
+    try {
+      await this.prisma.propertyImage.createMany({
+        data: uploadedFiles.map((file, index) => ({
+          propertyId,
+          url: file.publicPath,
+          alt: property.title,
+          sortOrder: property.images.length + index,
+        })),
+      });
+    } catch (error) {
+      await this.files.removeStoredFiles(uploadedFiles);
+      throw error;
+    }
     return this.prisma.property.findUnique({ where: { id: propertyId }, include: { images: true } });
   }
 

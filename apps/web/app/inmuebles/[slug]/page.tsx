@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import { apiFetch, assetUrl, pesos } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { assetUrl, pesos } from '@/lib/format';
 import type { Property } from '@/lib/types';
 import { ContactForm } from '@/components/ContactForm';
 

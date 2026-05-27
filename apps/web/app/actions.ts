@@ -100,6 +100,16 @@ export async function createInvoiceAction(_previous: ActionState, formData: Form
   }
 }
 
+export async function uploadFilesAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    await apiFetch('/admin/files', { method: 'POST', body: formData }, true);
+    revalidatePath('/admin/archivos');
+    return { success: 'Los archivos quedaron cargados y disponibles para compartir.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
 export async function beginPaymentAction(formData: FormData): Promise<void> {
   const invoiceId = String(formData.get('invoiceId'));
   const intent = await apiFetch<{ provider: string; checkoutUrl: string | null; payment: { reference: string } }>(`/payments/invoices/${invoiceId}/intent`, { method: 'POST' }, true);

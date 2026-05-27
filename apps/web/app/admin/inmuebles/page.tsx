@@ -3,7 +3,8 @@ import Image from 'next/image';
 import { AdminNav } from '@/components/AdminNav';
 import { AdminPropertyForm } from '@/components/AdminPropertyForm';
 import { archivePropertyAction } from '@/app/actions';
-import { apiFetch, assetUrl, pesos } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { assetUrl, pesos } from '@/lib/format';
 import { requireUser } from '@/lib/auth';
 import type { Property } from '@/lib/types';
 

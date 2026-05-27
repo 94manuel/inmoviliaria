@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { AdminNav } from '@/components/AdminNav';
-import { apiFetch, fecha } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { fecha } from '@/lib/format';
 import { requireUser } from '@/lib/auth';
 import type { ContactMessage } from '@/lib/types';
 

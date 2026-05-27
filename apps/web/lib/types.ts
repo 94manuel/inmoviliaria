@@ -2,6 +2,7 @@ export type Role = 'ADMIN' | 'USER';
 export type PropertyStatus = 'AVAILABLE' | 'RENTED' | 'ARCHIVED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'OVERDUE' | 'VOID';
 export type ChargeCatalogType = 'SERVICE' | 'PRODUCT';
+export type StoredFilePurpose = 'PROPERTY_IMAGE' | 'GENERIC';
 
 export interface ChargeCatalogItem {
   id: string;
@@ -77,4 +78,16 @@ export interface ContactMessage {
   message: string;
   status: string;
   createdAt: string;
+}
+
+export interface StoredFile {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  purpose: StoredFilePurpose;
+  publicPath: string;
+  downloadPath?: string;
+  createdAt: string;
+  createdBy?: { id: string; name: string; email: string } | null;
 }

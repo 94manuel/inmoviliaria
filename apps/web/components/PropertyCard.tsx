@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { assetUrl, pesos } from '@/lib/api';
+import { assetUrl, pesos } from '@/lib/format';
 import type { Property } from '@/lib/types';
 
 export function PropertyCard({ property }: { property: Property }) {

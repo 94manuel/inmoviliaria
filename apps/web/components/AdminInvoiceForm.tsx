@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useActionState } from 'react';
 import { createInvoiceAction, type ActionState } from '@/app/actions';
-import { pesos } from '@/lib/api';
+import { pesos } from '@/lib/format';
 import type { ChargeCatalogItem, Lease } from '@/lib/types';
 
 interface DraftLine {

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { AdminNav } from '@/components/AdminNav';
 import { AdminInvoiceForm } from '@/components/AdminInvoiceForm';
-import { apiFetch, fecha, pesos } from '@/lib/api';
+import { apiFetch } from '@/lib/api';
+import { fecha, pesos } from '@/lib/format';
 import { requireUser } from '@/lib/auth';
 import type { ChargeCatalogItem, Invoice, Lease } from '@/lib/types';
 
