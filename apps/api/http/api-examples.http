@@ -6,7 +6,7 @@ POST {{api}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "cliente@inmobiliariaraiz.co",
+  "email": "cliente@asesoriainmobiliariajb.com",
   "password": "Cliente123*"
 }
 
@@ -22,7 +22,7 @@ POST {{api}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "admin@inmobiliariaraiz.co",
+  "email": "admin@asesoriainmobiliariajb.com",
   "password": "Admin123*"
 }
 

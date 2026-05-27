@@ -1,4 +1,4 @@
-# Inmobiliaria Raíz — Next.js SSR + NestJS + Prisma 7
+# Asesoría Inmobiliaria JB — Next.js SSR + NestJS + Prisma 7
 
 Plataforma web para publicar inmuebles en arriendo, recibir contactos, administrar galerías fotográficas y permitir que los arrendatarios consulten y paguen facturas.
 
@@ -38,8 +38,8 @@ Si `5432`, `4000` o `3000` ya estan en uso en su equipo, ajuste `POSTGRES_HOST_P
 
 | Rol | Correo | Contraseña |
 | --- | --- | --- |
-| Administrador | `admin@inmobiliariaraiz.co` | `Admin123*` |
-| Arrendatario | `cliente@inmobiliariaraiz.co` | `Cliente123*` |
+| Administrador | `admin@asesoriainmobiliariajb.com` | `Admin123*` |
+| Arrendatario | `cliente@asesoriainmobiliariajb.com` | `Cliente123*` |
 
 Cambie estas credenciales y `JWT_SECRET` antes de cualquier despliegue real.
 
@@ -90,7 +90,15 @@ Por defecto, el entorno usa:
 PAYMENT_PROVIDER=mock
 ```
 
-Para habilitar Wompi, configure llaves de sandbox o producción y cambie:
+Para habilitar Cybervestigio con redirección automática de checkout, configure:
+
+```env
+PAYMENT_PROVIDER=cybervestigio
+CYBERVESTIGIO_CHECKOUT_URL=https://cybervestigio.com/pagos
+CYBERVESTIGIO_RETURN_URL=https://su-dominio/mi-cuenta
+```
+
+También puede habilitar Wompi, configure llaves de sandbox o producción y cambie:
 
 ```env
 PAYMENT_PROVIDER=wompi

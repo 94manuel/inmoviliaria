@@ -26,7 +26,7 @@ async function bootstrap(): Promise<void> {
 
   const port = Number(process.env.PORT ?? 4000);
   await app.listen(port);
-  console.log(`API Inmobiliaria Raíz disponible en http://localhost:${port}/api`);
+  console.log(`API Asesoría Inmobiliaria JB disponible en http://localhost:${port}/api`);
 }
 
 void bootstrap();

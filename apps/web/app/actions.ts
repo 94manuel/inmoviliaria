@@ -81,9 +81,17 @@ export async function archivePropertyAction(formData: FormData): Promise<void> {
 
 export async function createInvoiceAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   try {
+    const services = parseInvoiceItems(formData.get('services'));
+    const products = parseInvoiceItems(formData.get('products'));
     await apiFetch('/admin/invoices', {
       method: 'POST',
-      body: JSON.stringify({ leaseId: formData.get('leaseId'), period: formData.get('period'), dueDate: formData.get('dueDate'), amount: Number(formData.get('amount')) }),
+      body: JSON.stringify({
+        leaseId: formData.get('leaseId'),
+        period: formData.get('period'),
+        dueDate: formData.get('dueDate'),
+        services,
+        products,
+      }),
     }, true);
     revalidatePath('/admin/facturas');
     return { success: 'Factura generada exitosamente.' };
@@ -95,7 +103,7 @@ export async function createInvoiceAction(_previous: ActionState, formData: Form
 export async function beginPaymentAction(formData: FormData): Promise<void> {
   const invoiceId = String(formData.get('invoiceId'));
   const intent = await apiFetch<{ provider: string; checkoutUrl: string | null; payment: { reference: string } }>(`/payments/invoices/${invoiceId}/intent`, { method: 'POST' }, true);
-  if (intent.provider === 'WOMPI' && intent.checkoutUrl) redirect(intent.checkoutUrl);
+  if (intent.checkoutUrl) redirect(intent.checkoutUrl);
   redirect(`/mi-cuenta/facturas/${invoiceId}/pagar?reference=${encodeURIComponent(intent.payment.reference)}`);
 }
 
@@ -112,4 +120,22 @@ function messageOf(error: unknown): string {
 
 function isRedirectError(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'digest' in error && String((error as { digest?: string }).digest).startsWith('NEXT_REDIRECT');
+}
+
+function parseInvoiceItems(raw: FormDataEntryValue | null): Array<{ itemId: string; quantity: number }> {
+  if (typeof raw !== 'string' || raw.trim().length === 0) return [];
+  try {
+    const parsed = JSON.parse(raw) as Array<{ itemId?: unknown; quantity?: unknown }>;
+    return parsed
+      .filter((item) => typeof item.itemId === 'string' && item.itemId.length > 0)
+      .map((item) => {
+        const quantity = Number(item.quantity ?? 1);
+        return {
+          itemId: String(item.itemId),
+          quantity: Number.isFinite(quantity) && quantity > 0 ? Math.floor(quantity) : 1,
+        };
+      });
+  } catch {
+    return [];
+  }
 }

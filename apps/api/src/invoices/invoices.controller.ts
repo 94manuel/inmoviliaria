@@ -29,6 +29,13 @@ export class InvoicesController {
     return this.invoices.listAdmin();
   }
 
+  @Get('admin/invoices/catalog')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  catalog() {
+    return this.invoices.listCatalog();
+  }
+
   @Post('admin/invoices')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')

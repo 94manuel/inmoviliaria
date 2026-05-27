@@ -37,6 +37,12 @@ enum PaymentStatus {
 enum PaymentProvider {
   MOCK
   WOMPI
+  CYBERVESTIGIO
+}
+
+enum ChargeCatalogType {
+  SERVICE
+  PRODUCT
 }
 
 enum ContactStatus {
@@ -122,9 +128,36 @@ model Invoice {
   userId      String
   lease       Lease         @relation(fields: [leaseId], references: [id])
   user        User          @relation(fields: [userId], references: [id])
+  lineItems   InvoiceLineItem[]
   payments    Payment[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+}
+
+model ChargeCatalogItem {
+  id         String            @id @default(cuid())
+  type       ChargeCatalogType
+  code       String            @unique
+  name       String
+  unitPrice  Int
+  active     Boolean           @default(true)
+  lineItems  InvoiceLineItem[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+model InvoiceLineItem {
+  id            String            @id @default(cuid())
+  invoiceId     String
+  catalogItemId String
+  quantity      Int               @default(1)
+  unitPrice     Int
+  total         Int
+  invoice       Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  catalogItem   ChargeCatalogItem @relation(fields: [catalogItemId], references: [id])
+  createdAt     DateTime          @default(now())
+
+  @@unique([invoiceId, catalogItemId])
 }
 
 model Payment {

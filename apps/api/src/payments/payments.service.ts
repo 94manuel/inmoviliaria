@@ -18,11 +18,22 @@ export class PaymentsService {
     const invoice = await this.invoices.findMine(invoiceId, userId);
     if (invoice.status === 'PAID') throw new BadRequestException('Esta factura ya se encuentra pagada.');
     const reference = `INV-${invoice.code}-${randomUUID().slice(0, 8)}`;
-    const provider = (process.env.PAYMENT_PROVIDER ?? 'mock').toLowerCase() === 'wompi' ? 'WOMPI' : 'MOCK';
+    const paymentProvider = (process.env.PAYMENT_PROVIDER ?? 'mock').toLowerCase();
+    const provider = paymentProvider === 'wompi'
+      ? 'WOMPI'
+      : paymentProvider === 'cybervestigio'
+        ? 'CYBERVESTIGIO'
+        : paymentProvider === 'mock'
+          ? 'MOCK'
+          : null;
+    if (!provider) throw new BadRequestException('PAYMENT_PROVIDER no es válido. Use mock, wompi o cybervestigio.');
     let checkoutUrl: string | null = null;
 
     if (provider === 'WOMPI') {
       checkoutUrl = this.buildWompiCheckout(reference, invoice.amount);
+    }
+    if (provider === 'CYBERVESTIGIO') {
+      checkoutUrl = this.buildCybervestigioCheckout(reference, invoice.amount, invoice.code);
     }
     const payment = await this.prisma.payment.create({
       data: { reference, amount: invoice.amount, invoiceId, userId, provider, status: 'PENDING', checkoutUrl },
@@ -94,6 +105,18 @@ export class PaymentsService {
       'redirect-url': redirectUrl,
     });
     return `https://checkout.wompi.co/p/?${params.toString()}`;
+  }
+
+  private buildCybervestigioCheckout(reference: string, amountInPesos: number, invoiceCode: string): string {
+    const baseUrl = process.env.CYBERVESTIGIO_CHECKOUT_URL ?? 'https://cybervestigio.com/pagos';
+    const returnUrl = process.env.CYBERVESTIGIO_RETURN_URL ?? process.env.WEB_ORIGIN ?? 'http://localhost:3000/mi-cuenta';
+    const checkoutUrl = new URL(baseUrl);
+    checkoutUrl.searchParams.set('reference', reference);
+    checkoutUrl.searchParams.set('amount', String(amountInPesos));
+    checkoutUrl.searchParams.set('currency', 'COP');
+    checkoutUrl.searchParams.set('description', `Pago factura ${invoiceCode}`);
+    checkoutUrl.searchParams.set('returnUrl', returnUrl);
+    return checkoutUrl.toString();
   }
 
   private readPath(source: Record<string, unknown>, path: string): unknown {

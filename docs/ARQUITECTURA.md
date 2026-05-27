@@ -1,4 +1,4 @@
-# Arquitectura técnica — Inmobiliaria Raíz
+# Arquitectura técnica — Asesoría Inmobiliaria JB
 
 ## Vista general
 

@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: { default: 'Inmobiliaria Raíz | Arriendos con confianza', template: '%s | Inmobiliaria Raíz' },
+  title: { default: 'Asesoría Inmobiliaria JB | Arriendos con confianza', template: '%s | Asesoría Inmobiliaria JB' },
   description: 'Encuentra inmuebles en arriendo y administra tus pagos de forma sencilla.',
 };
 

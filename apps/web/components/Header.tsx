@@ -8,8 +8,8 @@ export async function Header() {
     <header className="header">
       <div className="container nav">
         <Link className="brand" href="/">
-          <span className="brandMark">R</span>
-          <span><strong>Inmobiliaria Raíz</strong><small>Espacios para vivir</small></span>
+          <span className="brandMark">J</span>
+          <span><strong>Asesoría Inmobiliaria JB</strong><small>Espacios para vivir</small></span>
         </Link>
         <nav className="navLinks" aria-label="Navegación principal">
           <Link href="/">Inicio</Link>

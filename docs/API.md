@@ -7,7 +7,7 @@ Base local: `http://localhost:4000/api`
 ### `POST /auth/login`
 
 ```json
-{ "email": "cliente@inmobiliariaraiz.co", "password": "Cliente123*" }
+{ "email": "cliente@asesoriainmobiliariajb.com", "password": "Cliente123*" }
 ```
 
 Respuesta:

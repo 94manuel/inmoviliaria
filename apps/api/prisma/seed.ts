@@ -9,27 +9,50 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
 async function seed(): Promise<void> {
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@inmobiliariaraiz.co' },
+    where: { email: 'admin@asesoriainmobiliariajb.com' },
     update: {},
     create: {
-      name: 'Administrador Inmobiliaria Raíz',
-      email: 'admin@inmobiliariaraiz.co',
+      name: 'Administrador Asesoría Inmobiliaria JB',
+      email: 'admin@asesoriainmobiliariajb.com',
       passwordHash: await bcrypt.hash('Admin123*', 12),
       role: 'ADMIN',
       phone: '300 000 0000',
     },
   });
   const customer = await prisma.user.upsert({
-    where: { email: 'cliente@inmobiliariaraiz.co' },
+    where: { email: 'cliente@asesoriainmobiliariajb.com' },
     update: {},
     create: {
       name: 'Laura Martínez',
-      email: 'cliente@inmobiliariaraiz.co',
+      email: 'cliente@asesoriainmobiliariajb.com',
       passwordHash: await bcrypt.hash('Cliente123*', 12),
       role: 'USER',
       phone: '301 555 1188',
     },
   });
+
+  const [rentService, adminFeeService] = await Promise.all([
+    prisma.chargeCatalogItem.upsert({
+      where: { code: 'SERV-ARRIENDO' },
+      update: { name: 'Canon de arrendamiento', unitPrice: 3400000, active: true, type: 'SERVICE' },
+      create: { code: 'SERV-ARRIENDO', name: 'Canon de arrendamiento', unitPrice: 3400000, type: 'SERVICE' },
+    }),
+    prisma.chargeCatalogItem.upsert({
+      where: { code: 'SERV-ADMIN' },
+      update: { name: 'Cuota de administración', unitPrice: 520000, active: true, type: 'SERVICE' },
+      create: { code: 'SERV-ADMIN', name: 'Cuota de administración', unitPrice: 520000, type: 'SERVICE' },
+    }),
+    prisma.chargeCatalogItem.upsert({
+      where: { code: 'SERV-ESTUDIO' },
+      update: { name: 'Estudio de arrendamiento', unitPrice: 180000, active: true, type: 'SERVICE' },
+      create: { code: 'SERV-ESTUDIO', name: 'Estudio de arrendamiento', unitPrice: 180000, type: 'SERVICE' },
+    }),
+    prisma.chargeCatalogItem.upsert({
+      where: { code: 'PROD-COPIA-LLAVE' },
+      update: { name: 'Copia de llave adicional', unitPrice: 25000, active: true, type: 'PRODUCT' },
+      create: { code: 'PROD-COPIA-LLAVE', name: 'Copia de llave adicional', unitPrice: 25000, type: 'PRODUCT' },
+    }),
+  ]);
 
   const apartment = await prisma.property.upsert({
     where: { slug: 'apartamento-luz-chico' },
@@ -113,7 +136,12 @@ async function seed(): Promise<void> {
   });
   const pendingInvoice = await prisma.invoice.upsert({
     where: { code: 'FAC-2026-0005' },
-    update: {},
+    update: {
+      amount: 3920000,
+      status: 'PENDING',
+      period: new Date('2026-05-01'),
+      dueDate: new Date('2026-05-10'),
+    },
     create: {
       code: 'FAC-2026-0005',
       period: new Date('2026-05-01'),
@@ -126,7 +154,13 @@ async function seed(): Promise<void> {
   });
   const paidInvoice = await prisma.invoice.upsert({
     where: { code: 'FAC-2026-0004' },
-    update: {},
+    update: {
+      amount: 3920000,
+      status: 'PAID',
+      paidAt: new Date('2026-04-08'),
+      period: new Date('2026-04-01'),
+      dueDate: new Date('2026-04-10'),
+    },
     create: {
       code: 'FAC-2026-0004',
       period: new Date('2026-04-01'),
@@ -138,6 +172,52 @@ async function seed(): Promise<void> {
       userId: customer.id,
     },
   });
+
+  await prisma.invoiceLineItem.upsert({
+    where: { invoiceId_catalogItemId: { invoiceId: pendingInvoice.id, catalogItemId: rentService.id } },
+    update: { quantity: 1, unitPrice: rentService.unitPrice, total: rentService.unitPrice },
+    create: {
+      invoiceId: pendingInvoice.id,
+      catalogItemId: rentService.id,
+      quantity: 1,
+      unitPrice: rentService.unitPrice,
+      total: rentService.unitPrice,
+    },
+  });
+  await prisma.invoiceLineItem.upsert({
+    where: { invoiceId_catalogItemId: { invoiceId: pendingInvoice.id, catalogItemId: adminFeeService.id } },
+    update: { quantity: 1, unitPrice: adminFeeService.unitPrice, total: adminFeeService.unitPrice },
+    create: {
+      invoiceId: pendingInvoice.id,
+      catalogItemId: adminFeeService.id,
+      quantity: 1,
+      unitPrice: adminFeeService.unitPrice,
+      total: adminFeeService.unitPrice,
+    },
+  });
+  await prisma.invoiceLineItem.upsert({
+    where: { invoiceId_catalogItemId: { invoiceId: paidInvoice.id, catalogItemId: rentService.id } },
+    update: { quantity: 1, unitPrice: rentService.unitPrice, total: rentService.unitPrice },
+    create: {
+      invoiceId: paidInvoice.id,
+      catalogItemId: rentService.id,
+      quantity: 1,
+      unitPrice: rentService.unitPrice,
+      total: rentService.unitPrice,
+    },
+  });
+  await prisma.invoiceLineItem.upsert({
+    where: { invoiceId_catalogItemId: { invoiceId: paidInvoice.id, catalogItemId: adminFeeService.id } },
+    update: { quantity: 1, unitPrice: adminFeeService.unitPrice, total: adminFeeService.unitPrice },
+    create: {
+      invoiceId: paidInvoice.id,
+      catalogItemId: adminFeeService.id,
+      quantity: 1,
+      unitPrice: adminFeeService.unitPrice,
+      total: adminFeeService.unitPrice,
+    },
+  });
+
   await prisma.payment.upsert({
     where: { reference: 'SEED-PAGO-FAC-2026-0004' },
     update: {},

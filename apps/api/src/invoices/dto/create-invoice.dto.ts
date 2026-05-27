@@ -1,5 +1,14 @@
 import { Type } from 'class-transformer';
-import { IsDateString, IsNumber, IsString, Min } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsDateString, IsString, Min, ValidateNested } from 'class-validator';
+
+export class InvoiceLineItemInputDto {
+  @IsString()
+  itemId!: string;
+
+  @Type(() => Number)
+  @Min(1)
+  quantity!: number;
+}
 
 export class CreateInvoiceDto {
   @IsString()
@@ -11,8 +20,14 @@ export class CreateInvoiceDto {
   @IsDateString()
   dueDate!: string;
 
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  amount!: number;
+  @IsArray()
+  @ArrayNotEmpty()
+  @ValidateNested({ each: true })
+  @Type(() => InvoiceLineItemInputDto)
+  services!: InvoiceLineItemInputDto[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => InvoiceLineItemInputDto)
+  products: InvoiceLineItemInputDto[] = [];
 }

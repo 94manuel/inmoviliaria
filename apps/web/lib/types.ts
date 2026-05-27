@@ -1,6 +1,16 @@
 export type Role = 'ADMIN' | 'USER';
 export type PropertyStatus = 'AVAILABLE' | 'RENTED' | 'ARCHIVED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'OVERDUE' | 'VOID';
+export type ChargeCatalogType = 'SERVICE' | 'PRODUCT';
+
+export interface ChargeCatalogItem {
+  id: string;
+  type: ChargeCatalogType;
+  code: string;
+  name: string;
+  unitPrice: number;
+  active: boolean;
+}
 
 export interface User {
   sub: string;
@@ -42,6 +52,13 @@ export interface Invoice {
   paidAt?: string | null;
   user?: { name: string; email: string };
   lease: { id?: string; property: { title: string; address?: string }; user?: { name: string } };
+  lineItems?: Array<{
+    id: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    catalogItem: { code: string; name: string; type: ChargeCatalogType };
+  }>;
   payments?: Array<{ reference: string; status: string; provider: string }>;
 }
 
