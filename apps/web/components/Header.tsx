@@ -14,6 +14,7 @@ export async function Header() {
         <nav className="navLinks" aria-label="Navegación principal">
           <Link href="/">Inicio</Link>
           <Link href="/inmuebles">Inmuebles</Link>
+          <Link href="/noticias">Noticias</Link>
           <Link href="/nosotros">Nosotros</Link>
           <Link href="/contacto">Contacto</Link>
           {user?.role === 'ADMIN' && <Link href="/admin">Administración</Link>}

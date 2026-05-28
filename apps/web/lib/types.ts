@@ -37,10 +37,25 @@ export interface Property {
   areaM2: number;
   parking: number;
   features: string[];
+  tour360Url?: string | null;
+  videoUrl?: string | null;
   published: boolean;
   status: PropertyStatus;
   images: PropertyImage[];
   _count?: { leases: number };
+}
+
+export interface NewsPost {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  sourceLabel?: string | null;
+  externalUrl?: string | null;
+  published: boolean;
+  createdAt: string;
+  createdBy?: { id: string; name: string };
 }
 
 export interface Invoice {

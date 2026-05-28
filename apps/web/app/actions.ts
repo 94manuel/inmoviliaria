@@ -79,6 +79,37 @@ export async function archivePropertyAction(formData: FormData): Promise<void> {
   revalidatePath('/inmuebles');
 }
 
+export async function createNewsAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const sourceLabel = String(formData.get('sourceLabel') ?? '').trim();
+    const externalUrl = String(formData.get('externalUrl') ?? '').trim();
+    await apiFetch('/admin/news', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: formData.get('title'),
+        summary: formData.get('summary'),
+        content: formData.get('content'),
+        sourceLabel: sourceLabel || undefined,
+        externalUrl: externalUrl || undefined,
+        published: true,
+      }),
+    }, true);
+    revalidatePath('/admin/noticias');
+    revalidatePath('/noticias');
+    revalidatePath('/');
+    return { success: 'La noticia fue publicada correctamente.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
+export async function archiveNewsAction(formData: FormData): Promise<void> {
+  await apiFetch(`/admin/news/${String(formData.get('id'))}`, { method: 'DELETE' }, true);
+  revalidatePath('/admin/noticias');
+  revalidatePath('/noticias');
+  revalidatePath('/');
+}
+
 export async function createInvoiceAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const services = parseInvoiceItems(formData.get('services'));

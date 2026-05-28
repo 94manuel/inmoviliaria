@@ -29,6 +29,29 @@ services:
     volumes:
       - minio_data:/data
 
+  minio-init:
+    image: minio/mc:latest
+    container_name: inmobiliaria_minio_init
+    depends_on:
+      minio:
+        condition: service_started
+    environment:
+      MC_HOST_local: http://${STORAGE_ACCESS_KEY:-minioadmin}:${STORAGE_SECRET_KEY:-minioadmin}@minio:9000
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-inmobiliaria-assets}
+    restart: "no"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until mc ls local >/dev/null 2>&1; do
+          echo "Esperando MinIO..."
+          sleep 1
+        done
+        mc mb --ignore-existing local/$STORAGE_BUCKET
+        printf '' | mc pipe local/$STORAGE_BUCKET/files/generic/.keep
+        printf '' | mc pipe local/$STORAGE_BUCKET/files/property-360/.keep
+        printf '' | mc pipe local/$STORAGE_BUCKET/property-images/.keep
+
   api:
     build:
       context: .
@@ -49,8 +72,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
     command: sh -c "mkdir -p apps/api/uploads/seed && cp -rn seed-assets/. apps/api/uploads/seed/ && npm run db:migrate -w @inmobiliaria/api && npm run db:seed -w @inmobiliaria/api && npm run start:prod -w @inmobiliaria/api"
 
   web:

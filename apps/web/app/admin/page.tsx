@@ -23,7 +23,7 @@ export default async function AdminPage() {
             <div className="metric"><span>Recaudo registrado</span><strong>{pesos(metrics.collectedAmount)}</strong><small>pagos aprobados</small></div>
             <div className="metric"><span>Contactos nuevos</span><strong>{metrics.newContacts}</strong><small>por atender</small></div>
           </div>
-          <div className="quickGrid"><Link className="card quickCard" href="/admin/inmuebles"><strong>Publicar inmueble</strong><span>Agregar información y fotografías →</span></Link><Link className="card quickCard" href="/admin/archivos"><strong>Compartir archivos</strong><span>Subir documentos e insumos públicos →</span></Link><Link className="card quickCard" href="/admin/facturas"><strong>Gestionar facturas</strong><span>Crear cobros mensuales →</span></Link></div>
+          <div className="quickGrid"><Link className="card quickCard" href="/admin/inmuebles"><strong>Publicar inmueble</strong><span>Agregar información y fotografías →</span></Link><Link className="card quickCard" href="/admin/noticias"><strong>Publicar noticia</strong><span>Compartir novedades o enlazar prensa digital →</span></Link><Link className="card quickCard" href="/admin/archivos"><strong>Compartir archivos</strong><span>Subir documentos e insumos públicos →</span></Link><Link className="card quickCard" href="/admin/facturas"><strong>Gestionar facturas</strong><span>Crear cobros mensuales →</span></Link></div>
         </div>
       </div>
     </section>

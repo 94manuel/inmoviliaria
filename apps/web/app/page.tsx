@@ -1,12 +1,16 @@
 import Link from 'next/link';
 import { apiFetch } from '@/lib/api';
-import type { Property } from '@/lib/types';
+import type { NewsPost, Property } from '@/lib/types';
+import { NewsCard } from '@/components/NewsCard';
 import { PropertyCard } from '@/components/PropertyCard';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const featured = await apiFetch<Property[]>('/properties/featured');
+  const [featured, featuredNews] = await Promise.all([
+    apiFetch<Property[]>('/properties/featured'),
+    apiFetch<NewsPost[]>('/news/featured'),
+  ]);
   return (
     <>
       <section className="hero">
@@ -30,6 +34,16 @@ export default async function HomePage() {
         <div className="container">
           <div className="sectionHeading"><div><span className="eyebrow">Destacados</span><h2>Inmuebles disponibles</h2></div><Link className="textLink" href="/inmuebles">Ver todos →</Link></div>
           <div className="cardsGrid">{featured.map((property) => <PropertyCard property={property} key={property.id} />)}</div>
+        </div>
+      </section>
+      <section className="sectionAlt">
+        <div className="container">
+          <div className="sectionHeading"><div><span className="eyebrow">Noticias</span><h2>Novedades y prensa del sector</h2></div><Link className="textLink" href="/noticias">Ver noticias →</Link></div>
+          {featuredNews.length > 0 ? (
+            <div className="cardsGrid newsGrid">{featuredNews.map((newsPost) => <NewsCard newsPost={newsPost} key={newsPost.id} />)}</div>
+          ) : (
+            <div className="card empty">Pronto publicaremos novedades inmobiliarias y enlaces a medios digitales relevantes.</div>
+          )}
         </div>
       </section>
       <section className="benefits sectionAlt">

@@ -46,6 +46,11 @@ export class FilesService {
     return this.uploadMany(files, { createdById, purpose: 'PROPERTY_IMAGE', folder: 'property-images' });
   }
 
+  async uploadProperty360(file: Express.Multer.File, createdById?: string) {
+    const [uploaded] = await this.uploadMany([file], { createdById, purpose: 'GENERIC', folder: 'property-360' });
+    return uploaded ?? null;
+  }
+
   async removeStoredFiles(files: Array<{ id: string; objectKey: string }>): Promise<void> {
     if (files.length === 0) return;
     await Promise.allSettled(files.map((file) => this.storage.removeObject(file.objectKey)));

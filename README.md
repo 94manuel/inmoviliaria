@@ -8,6 +8,7 @@ Plataforma web para publicar inmuebles en arriendo, recibir contactos, administr
 - **Backend REST** con NestJS 11, JWT y control de acceso `ADMIN` / `USER`.
 - **Prisma ORM 7** con PostgreSQL, `prisma.config.ts`, cliente generado y `@prisma/adapter-pg`.
 - Catálogo público, ficha del inmueble y formulario de contacto.
+- Ficha del inmueble con galería, foto 360 cargada en MinIO y video.
 - Panel administrativo: indicadores, publicación de inmuebles con múltiples fotografías, mensajes y facturas.
 - Cuenta del usuario: contratos, facturas pagadas/pendientes y pago.
 - Pago local `mock` para desarrollo e integración preparada con **Wompi Checkout Web** y webhook verificado.
@@ -67,6 +68,7 @@ Si ejecuta el backend sin Docker, debe tener un storage S3-compatible disponible
 - Inicio con propiedades destacadas.
 - Catálogo filtrable de inmuebles disponibles.
 - Detalle de inmueble con galería, características y solicitud de información.
+- Integración opcional de foto 360 cargada desde MinIO y video por inmueble.
 - Formulario de contacto.
 
 ### Panel administrativo

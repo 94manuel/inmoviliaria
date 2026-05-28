@@ -21,6 +21,10 @@ export function AdminPropertyForm() {
       </div>
       <label>Características <span className="hint">separadas por coma</span><input name="features" placeholder="Balcón, vigilancia, pet friendly" /></label>
       <label>Fotografías <span className="hint">JPG, PNG o WEBP; máximo 10 archivos de 5 MB</span><input type="file" accept="image/jpeg,image/png,image/webp" name="photos" multiple /></label>
+      <div className="twoCols">
+        <label>Foto 360 <span className="hint">Panorámica equirectangular JPG, PNG o WEBP; máximo 15 MB</span><input name="tour360" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+        <label>Video <span className="hint">URL de YouTube, Vimeo o archivo MP4/WebM</span><input name="videoUrl" type="url" placeholder="https://..." /></label>
+      </div>
       <input type="hidden" name="published" value="true" />
       {state.error && <p className="alert error">{state.error}</p>}
       {state.success && <p className="alert success">{state.success}</p>}

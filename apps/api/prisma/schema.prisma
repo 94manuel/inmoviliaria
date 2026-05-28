@@ -64,6 +64,7 @@ model User {
   passwordHash  String
   role          UserRole         @default(USER)
   properties    Property[]       @relation("PropertyCreator")
+  newsPosts     NewsPost[]       @relation("NewsCreator")
   leases        Lease[]
   invoices      Invoice[]
   payments      Payment[]
@@ -88,6 +89,8 @@ model Property {
   areaM2            Float
   parking           Int            @default(0)
   features          String[]
+  tour360Url        String?
+  videoUrl          String?
   status            PropertyStatus @default(AVAILABLE)
   published         Boolean        @default(true)
   images            PropertyImage[]
@@ -209,4 +212,21 @@ model ContactMessage {
   status    ContactStatus @default(NEW)
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
+}
+
+model NewsPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  summary     String
+  content     String
+  sourceLabel String?
+  externalUrl String?
+  published   Boolean  @default(true)
+  createdById String
+  createdBy   User     @relation("NewsCreator", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([published, createdAt])
 }

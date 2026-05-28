@@ -56,12 +56,16 @@ export class PropertiesService {
     });
   }
 
-  async create(dto: CreatePropertyDto, administratorId: string, files: Express.Multer.File[]) {
+  async create(dto: CreatePropertyDto, administratorId: string, files: Express.Multer.File[], tour360File?: Express.Multer.File) {
     const slug = await this.uniqueSlug(dto.title);
     const features = dto.features
       ? dto.features.split(',').map((feature) => feature.trim()).filter(Boolean)
       : [];
     const uploadedFiles = await this.files.uploadPropertyImages(files, administratorId);
+    const uploadedTour360 = tour360File
+      ? await this.files.uploadProperty360(tour360File, administratorId)
+      : null;
+    const uploadedAssets = uploadedTour360 ? [...uploadedFiles, uploadedTour360] : uploadedFiles;
     try {
       return await this.prisma.property.create({
         data: {
@@ -79,6 +83,8 @@ export class PropertiesService {
           areaM2: dto.areaM2,
           parking: dto.parking,
           features,
+          tour360Url: uploadedTour360?.publicPath,
+          videoUrl: this.optionalText(dto.videoUrl),
           published: dto.published ?? true,
           createdById: administratorId,
           images: {
@@ -92,7 +98,7 @@ export class PropertiesService {
         include: { images: true },
       });
     } catch (error) {
-      await this.files.removeStoredFiles(uploadedFiles);
+      await this.files.removeStoredFiles(uploadedAssets);
       throw error;
     }
   }
@@ -144,5 +150,10 @@ export class PropertiesService {
       slug = `${base}-${suffix++}`;
     }
     return slug;
+  }
+
+  private optionalText(value?: string): string | undefined {
+    const normalized = value?.trim();
+    return normalized ? normalized : undefined;
   }
 }

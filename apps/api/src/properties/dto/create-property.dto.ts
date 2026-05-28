@@ -59,6 +59,10 @@ export class CreatePropertyDto {
   features?: string;
 
   @IsOptional()
+  @IsString()
+  videoUrl?: string;
+
+  @IsOptional()
   @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   published?: boolean;

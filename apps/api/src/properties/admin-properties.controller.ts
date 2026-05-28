@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Delete, Get, Param, Post, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser, type JwtUser } from '../common/decorators/current-user.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
@@ -9,7 +9,13 @@ import { CreatePropertyDto } from './dto/create-property.dto.js';
 import { PropertiesService } from './properties.service.js';
 
 const maxImageSize = Number(process.env.PROPERTY_IMAGE_MAX_FILE_SIZE ?? 5_000_000);
+const maxTour360Size = Number(process.env.PROPERTY_360_MAX_FILE_SIZE ?? 15_000_000);
 const storage = memoryStorage();
+
+type PropertyUploadFields = {
+  photos?: Express.Multer.File[];
+  tour360?: Express.Multer.File[];
+};
 
 @Controller('admin/properties')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,10 +29,16 @@ export class AdminPropertiesController {
   }
 
   @Post()
-  @UseInterceptors(FilesInterceptor('photos', 10, { storage, limits: { fileSize: maxImageSize } }))
-  create(@Body() dto: CreatePropertyDto, @UploadedFiles() files: Express.Multer.File[] = [], @CurrentUser() user: JwtUser) {
-    this.validateImages(files);
-    return this.properties.create(dto, user.sub, files);
+  @UseInterceptors(FileFieldsInterceptor([
+    { name: 'photos', maxCount: 10 },
+    { name: 'tour360', maxCount: 1 },
+  ], { storage, limits: { fileSize: Math.max(maxImageSize, maxTour360Size) } }))
+  create(@Body() dto: CreatePropertyDto, @UploadedFiles() files: PropertyUploadFields = {}, @CurrentUser() user: JwtUser) {
+    const photos = files.photos ?? [];
+    const tour360 = files.tour360?.[0];
+    this.validateImages(photos);
+    this.validateTour360(tour360);
+    return this.properties.create(dto, user.sub, photos, tour360);
   }
 
   @Post(':id/images')
@@ -45,5 +57,13 @@ export class AdminPropertiesController {
     if (required && files.length === 0) throw new BadRequestException('Debe subir al menos una imagen.');
     const invalid = files.find((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype) || file.size > maxImageSize);
     if (invalid) throw new BadRequestException('Las imágenes deben ser JPG, PNG o WEBP y pesar máximo 5 MB.');
+  }
+
+  private validateTour360(file?: Express.Multer.File): void {
+    if (!file) return;
+    const validMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validMimeTypes.includes(file.mimetype) || file.size > maxTour360Size) {
+      throw new BadRequestException('La foto 360 debe ser JPG, PNG o WEBP y pesar máximo 15 MB.');
+    }
   }
 }

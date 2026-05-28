@@ -1,0 +1,3 @@
+ALTER TABLE "Property"
+ADD COLUMN "tour360Url" TEXT,
+ADD COLUMN "videoUrl" TEXT;
