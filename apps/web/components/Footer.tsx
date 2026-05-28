@@ -1,11 +1,12 @@
 import Link from 'next/link';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export function Footer() {
   return (
     <footer className="footer">
       <div className="container footerGrid">
         <div>
-          <div className="brand footerBrand"><span className="brandMark">J</span><strong>Asesoría Inmobiliaria JB</strong></div>
+          <div className="footerBrand"><BrandLogo className="footerBrandLogo" stacked showTagline={false} /></div>
           <p>Administramos inmuebles para arriendo con claridad, respaldo y acompañamiento digital.</p>
         </div>
         <div><h4>Explora</h4><Link href="/inmuebles">Inmuebles</Link><Link href="/noticias">Noticias</Link><Link href="/nosotros">Quiénes somos</Link><Link href="/contacto">Contactar asesor</Link></div>

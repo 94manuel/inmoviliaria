@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/api';
 import { logoutAction } from '@/app/actions';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export async function Header() {
   const user = await getCurrentUser();
@@ -8,8 +9,7 @@ export async function Header() {
     <header className="header">
       <div className="container nav">
         <Link className="brand" href="/">
-          <span className="brandMark">J</span>
-          <span><strong>Asesoría Inmobiliaria JB</strong><small>Espacios para vivir</small></span>
+          <BrandLogo />
         </Link>
         <nav className="navLinks" aria-label="Navegación principal">
           <Link href="/">Inicio</Link>

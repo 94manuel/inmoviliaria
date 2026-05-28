@@ -3,6 +3,7 @@ import { apiFetch } from '@/lib/api';
 import type { NewsPost, Property } from '@/lib/types';
 import { NewsCard } from '@/components/NewsCard';
 import { PropertyCard } from '@/components/PropertyCard';
+import { BrandLogo } from '@/components/BrandLogo';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,10 +24,13 @@ export default async function HomePage() {
             <div className="trust"><div><strong>+120</strong><span>inmuebles administrados</span></div><div><strong>Digital</strong><span>facturas y pagos</span></div><div><strong>24/7</strong><span>consulta de cuenta</span></div></div>
           </div>
           <div className="heroVisual">
-            <div className="heroHome">
-              <div className="roof" /><div className="house"><div className="window"/><div className="door"/></div>
+            <span className="heroBadge">Respaldo inmobiliario</span>
+            <div className="heroBrandPanel">
+              <BrandLogo className="heroBrandLogo" stacked showTagline={false} />
+              <p className="heroStatement">Acompañamos arriendos, administración y pagos con una presencia clara, elegante y cercana.</p>
             </div>
             <div className="floatingCard"><strong>Pago seguro</strong><span>Consulta facturas pendientes y pagadas</span></div>
+            <div className="heroInsight"><strong>Atención cercana</strong><span>Propietarios y arrendatarios con soporte digital y seguimiento real.</span></div>
           </div>
         </div>
       </section>
