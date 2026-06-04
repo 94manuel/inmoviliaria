@@ -64,7 +64,7 @@ services:
       STORAGE_ENDPOINT: minio
       STORAGE_PORT: 9000
       STORAGE_USE_SSL: false
-      WEB_ORIGIN: http://localhost:${WEB_HOST_PORT:-3000}
+      WEB_ORIGIN: http://localhost:3000
     ports:
       - "${API_HOST_PORT:-4000}:4000"
     volumes:
@@ -87,7 +87,7 @@ services:
       API_INTERNAL_URL: http://api:4000
       NEXT_PUBLIC_API_URL: http://localhost:${API_HOST_PORT:-4000}
     ports:
-      - "${WEB_HOST_PORT:-3000}:3000"
+      - "3000:3000"
     depends_on:
       - api
 
