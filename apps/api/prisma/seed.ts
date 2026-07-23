@@ -7,25 +7,34 @@ const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL no está configurada para ejecutar el seed.');
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
+const adminEmail = process.env.ADMIN_INITIAL_EMAIL ?? 'admin@asesoriainmobiliariajb.com';
+const adminPassword = process.env.ADMIN_INITIAL_PASSWORD;
+const customerEmail = process.env.CUSTOMER_INITIAL_EMAIL ?? 'cliente@asesoriainmobiliariajb.com';
+const customerPassword = process.env.CUSTOMER_INITIAL_PASSWORD;
+
+if (!adminPassword || !customerPassword) {
+  throw new Error('ADMIN_INITIAL_PASSWORD y CUSTOMER_INITIAL_PASSWORD son obligatorias para ejecutar el seed.');
+}
+
 async function seed(): Promise<void> {
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@asesoriainmobiliariajb.com' },
+    where: { email: adminEmail },
     update: {},
     create: {
       name: 'Administrador Asesoría Inmobiliaria JB',
-      email: 'admin@asesoriainmobiliariajb.com',
-      passwordHash: await bcrypt.hash('Admin123*', 12),
+      email: adminEmail,
+      passwordHash: await bcrypt.hash(adminPassword, 12),
       role: 'ADMIN',
       phone: '300 000 0000',
     },
   });
   const customer = await prisma.user.upsert({
-    where: { email: 'cliente@asesoriainmobiliariajb.com' },
+    where: { email: customerEmail },
     update: {},
     create: {
       name: 'Laura Martínez',
-      email: 'cliente@asesoriainmobiliariajb.com',
-      passwordHash: await bcrypt.hash('Cliente123*', 12),
+      email: customerEmail,
+      passwordHash: await bcrypt.hash(customerPassword, 12),
       role: 'USER',
       phone: '301 555 1188',
     },

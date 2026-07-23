@@ -8,6 +8,8 @@ RUN npm install
 FROM dependencies AS builder
 WORKDIR /app
 COPY . .
+ARG NEXT_PUBLIC_API_URL=https://asesoriainmobiliariajb.com
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build -w @inmobiliaria/web
 

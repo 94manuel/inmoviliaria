@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: asesoria-db-init
+  namespace: asesoria-inmobiliaria
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        job-role: db-init
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-postgres
+          image: postgres:17-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h postgres-service -p 5432 -U "$POSTGRES_USER" -d "$POSTGRES_DB"; do
+                echo "Esperando PostgreSQL..."
+                sleep 3
+              done
+          envFrom:
+            - secretRef:
+                name: asesoria-secrets
+      containers:
+        - name: db-init
+          image: asesoria-inmobiliaria-api:local
+          imagePullPolicy: Never
+          command:
+            - sh
+            - -c
+            - |
+              npm run db:migrate -w @inmobiliaria/api
+              npm run db:seed -w @inmobiliaria/api
+          envFrom:
+            - configMapRef:
+                name: asesoria-config
+            - secretRef:
+                name: asesoria-secrets

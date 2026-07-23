@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: asesoria-postgres-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: asesoria-local
+  hostPath:
+    path: /var/lib/asesoria-inmobiliaria/postgres
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - srv1704143
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: asesoria-inmobiliaria
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: asesoria-local
+  volumeName: asesoria-postgres-pv
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: asesoria-minio-pv
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: asesoria-local
+  hostPath:
+    path: /var/lib/asesoria-inmobiliaria/minio
+    type: DirectoryOrCreate
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - srv1704143
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-pvc
+  namespace: asesoria-inmobiliaria
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: asesoria-local
+  volumeName: asesoria-minio-pv
+  resources:
+    requests:
+      storage: 20Gi

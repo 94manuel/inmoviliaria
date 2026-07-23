@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+NAMESPACE="asesoria-inmobiliaria"
+SECRETS_FILE="/root/asesoria-inmobiliaria-secrets.env"
+
+POSTGRES_DB="inmobiliaria"
+POSTGRES_USER="inmobiliaria"
+POSTGRES_PASSWORD="$(openssl rand -hex 24)"
+JWT_SECRET="$(openssl rand -hex 64)"
+STORAGE_ACCESS_KEY="asesoriaadmin"
+STORAGE_SECRET_KEY="$(openssl rand -hex 32)"
+ADMIN_INITIAL_EMAIL="admin@asesoriainmobiliariajb.com"
+ADMIN_INITIAL_PASSWORD="$(openssl rand -hex 16)"
+CUSTOMER_INITIAL_EMAIL="cliente@asesoriainmobiliariajb.com"
+CUSTOMER_INITIAL_PASSWORD="$(openssl rand -hex 16)"
+DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-service:5432/${POSTGRES_DB}?schema=public"
+
+umask 077
+cat > "$SECRETS_FILE" <<VARS
+POSTGRES_DB=${POSTGRES_DB}
+POSTGRES_USER=${POSTGRES_USER}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+DATABASE_URL=${DATABASE_URL}
+JWT_SECRET=${JWT_SECRET}
+STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY}
+STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY}
+ADMIN_INITIAL_EMAIL=${ADMIN_INITIAL_EMAIL}
+ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD}
+CUSTOMER_INITIAL_EMAIL=${CUSTOMER_INITIAL_EMAIL}
+CUSTOMER_INITIAL_PASSWORD=${CUSTOMER_INITIAL_PASSWORD}
+VARS
+
+kubectl -n "$NAMESPACE" create secret generic asesoria-secrets \
+  --from-env-file="$SECRETS_FILE" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+chmod 600 "$SECRETS_FILE"
+echo "Secret creado. Credenciales guardadas exclusivamente en: $SECRETS_FILE"
