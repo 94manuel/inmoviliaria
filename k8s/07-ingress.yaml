@@ -56,3 +56,26 @@ spec:
                 name: web-service
                 port:
                   number: 3000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n
+  namespace: asesoria-inmobiliaria
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: n8n.asesoriainmobiliariajb.com
+      http:
+        paths:
+          # Prefix / incluye editor, REST, assets, webhooks, webhook-test,
+          # formularios, SSE y conexiones WebSocket de n8n.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n-service
+                port:
+                  number: 5678

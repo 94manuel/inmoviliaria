@@ -1,0 +1,168 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: asesoria-inmobiliaria
+  labels:
+    app: n8n
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: n8n
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      securityContext:
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+      initContainers:
+        - name: wait-postgres
+          image: postgres:17-alpine
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              until pg_isready -h postgres-service -p 5432; do
+                echo "Esperando PostgreSQL..."
+                sleep 3
+              done
+        - name: prepare-n8n-data
+          image: busybox:1.36
+          command:
+            - sh
+            - -ec
+            - chown -R 1000:1000 /home/node/.n8n
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: n8n-data
+              mountPath: /home/node/.n8n
+      containers:
+        - name: n8n
+          image: docker.n8n.io/n8nio/n8n:2.31.5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5678
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: N8N_HOST
+              value: n8n.asesoriainmobiliariajb.com
+            - name: N8N_PORT
+              value: "5678"
+            - name: N8N_LISTEN_ADDRESS
+              value: 0.0.0.0
+            - name: N8N_PROTOCOL
+              value: https
+            - name: N8N_EDITOR_BASE_URL
+              value: https://n8n.asesoriainmobiliariajb.com
+            - name: WEBHOOK_URL
+              value: https://n8n.asesoriainmobiliariajb.com/
+            - name: N8N_PROXY_HOPS
+              value: "2"
+            - name: N8N_SECURE_COOKIE
+              value: "true"
+            - name: N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS
+              value: "true"
+            - name: N8N_DIAGNOSTICS_ENABLED
+              value: "false"
+            - name: N8N_PERSONALIZATION_ENABLED
+              value: "false"
+            - name: N8N_VERSION_NOTIFICATIONS_ENABLED
+              value: "true"
+            - name: N8N_BLOCK_ENV_ACCESS_IN_NODE
+              value: "true"
+            - name: GENERIC_TIMEZONE
+              value: America/Bogota
+            - name: TZ
+              value: America/Bogota
+            - name: N8N_DEFAULT_BINARY_DATA_MODE
+              value: filesystem
+            - name: EXECUTIONS_DATA_PRUNE
+              value: "true"
+            - name: EXECUTIONS_DATA_MAX_AGE
+              value: "336"
+            - name: DB_TYPE
+              value: postgresdb
+            - name: DB_POSTGRESDB_HOST
+              value: postgres-service
+            - name: DB_POSTGRESDB_PORT
+              value: "5432"
+            - name: DB_POSTGRESDB_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-secrets
+                  key: N8N_DB_DATABASE
+            - name: DB_POSTGRESDB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-secrets
+                  key: N8N_DB_USER
+            - name: DB_POSTGRESDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-secrets
+                  key: N8N_DB_PASSWORD
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: n8n-secrets
+                  key: N8N_ENCRYPTION_KEY
+          volumeMounts:
+            - name: n8n-data
+              mountPath: /home/node/.n8n
+          startupProbe:
+            tcpSocket:
+              port: http
+            failureThreshold: 60
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      volumes:
+        - name: n8n-data
+          persistentVolumeClaim:
+            claimName: n8n-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n-service
+  namespace: asesoria-inmobiliaria
+  labels:
+    app: n8n
+spec:
+  type: ClusterIP
+  selector:
+    app: n8n
+  ports:
+    - name: http
+      port: 5678
+      targetPort: http
+      protocol: TCP

@@ -162,3 +162,13 @@ apps/
 - Usar HTTPS, secreto JWT robusto y gestor de secretos.
 - Mantener `PAYMENT_PROVIDER=wompi` únicamente con llaves protegidas.
 - Configurar dominio del webhook en el dashboard del comercio y validar pagos desde el evento, no desde el navegador.
+
+## n8n
+
+El paquete de producción incluye un despliegue opcional de n8n para:
+
+```text
+https://n8n.asesoriainmobiliariajb.com
+```
+
+La instalación utiliza el mismo clúster y PostgreSQL, pero mantiene base de datos, Secret, Service, PVC e Ingress independientes. Consulte `INSTALAR_N8N.md`.

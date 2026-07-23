@@ -1,0 +1,90 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: n8n-db-init
+  namespace: asesoria-inmobiliaria
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app: n8n-db-init
+        job-role: n8n-db-init
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: n8n-db-init
+          image: postgres:17-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              export PGPASSWORD="$POSTGRES_PASSWORD"
+
+              until pg_isready \
+                -h postgres-service \
+                -p 5432 \
+                -U "$POSTGRES_USER" \
+                -d postgres; do
+                echo "Esperando PostgreSQL..."
+                sleep 3
+              done
+
+              psql \
+                -h postgres-service \
+                -p 5432 \
+                -U "$POSTGRES_USER" \
+                -d postgres \
+                -v ON_ERROR_STOP=1 <<SQL
+              DO \$\$
+              BEGIN
+                IF NOT EXISTS (
+                  SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = '${N8N_DB_USER}'
+                ) THEN
+                  EXECUTE format(
+                    'CREATE ROLE %I LOGIN PASSWORD %L',
+                    '${N8N_DB_USER}',
+                    '${N8N_DB_PASSWORD}'
+                  );
+                ELSE
+                  EXECUTE format(
+                    'ALTER ROLE %I WITH LOGIN PASSWORD %L',
+                    '${N8N_DB_USER}',
+                    '${N8N_DB_PASSWORD}'
+                  );
+                END IF;
+              END
+              \$\$;
+              SQL
+
+              if ! psql \
+                -h postgres-service \
+                -p 5432 \
+                -U "$POSTGRES_USER" \
+                -d postgres \
+                -tAc "SELECT 1 FROM pg_database WHERE datname='${N8N_DB_DATABASE}'" \
+                | grep -q 1; then
+                createdb \
+                  -h postgres-service \
+                  -p 5432 \
+                  -U "$POSTGRES_USER" \
+                  -O "$N8N_DB_USER" \
+                  "$N8N_DB_DATABASE"
+              fi
+
+              psql \
+                -h postgres-service \
+                -p 5432 \
+                -U "$POSTGRES_USER" \
+                -d "$N8N_DB_DATABASE" \
+                -v ON_ERROR_STOP=1 \
+                -c "ALTER SCHEMA public OWNER TO \"$N8N_DB_USER\";" \
+                -c "GRANT ALL ON SCHEMA public TO \"$N8N_DB_USER\";"
+
+              echo "Base de datos de n8n preparada correctamente."
+          envFrom:
+            - secretRef:
+                name: asesoria-secrets
+            - secretRef:
+                name: n8n-secrets

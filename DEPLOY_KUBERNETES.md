@@ -191,3 +191,23 @@ kubectl apply -f k8s/08-network-policies.yaml
 - Rote todas las contraseñas, tokens y llaves que hayan estado en el ZIP o en manifiestos compartidos.
 - No publique PostgreSQL, MinIO ni el API de Kubernetes en Internet.
 - Mantenga expuestos públicamente solo Nginx 80/443.
+
+## 11. Instalación opcional de n8n
+
+El paquete incluye n8n en el mismo namespace, con almacenamiento y base de datos independientes. Consulte:
+
+```text
+INSTALAR_N8N.md
+```
+
+Archivos relacionados:
+
+```text
+k8s/09-n8n-storage.yaml
+k8s/create-n8n-secrets.sh
+k8s/10-n8n-db-init.yaml
+k8s/11-n8n.yaml
+k8s/07-ingress.yaml
+k8s/nginx-n8n-bootstrap.conf
+k8s/nginx-n8n.asesoriainmobiliariajb.com.conf
+```
