@@ -199,6 +199,7 @@ export class BancolombiaReconciliationService {
         leaseId: lease.id,
         tenantId: lease.tenant.id,
         status: { in: ['PENDING', 'OVERDUE'] },
+        deletedAt: null,
         amount: { gte: input.valor - tolerance, lte: input.valor + tolerance },
       },
       orderBy: { dueDate: 'asc' },
@@ -306,6 +307,7 @@ export class BancolombiaReconciliationService {
       where: {
         tenantId: { not: null },
         status: { in: ['PENDING', 'OVERDUE'] },
+        deletedAt: null,
         amount: { gte: amount - tolerance, lte: amount + tolerance },
         lease: {
           active: true,

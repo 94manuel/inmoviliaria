@@ -12,6 +12,7 @@ import type { CreateAdminUserDto } from './dto/create-admin-user.dto.js';
 type FinancialRecord = {
   amount: number;
   status: 'PENDING' | 'PAID' | 'OVERDUE' | 'VOID';
+  deletedAt?: Date | null;
   payments?: Array<{ amount: number; status: string }>;
 };
 
@@ -50,13 +51,14 @@ export class UsersService {
           include: { property: { select: { id: true, title: true, address: true, status: true } } },
         },
         invoices: {
+          where: { deletedAt: null },
           select: {
             amount: true,
             status: true,
             payments: { select: { amount: true, status: true } },
           },
         },
-        _count: { select: { leases: true, invoices: true, payments: true } },
+        _count: { select: { leases: true, invoices: { where: { deletedAt: null } }, payments: true } },
       },
       orderBy: { name: 'asc' },
     });
@@ -110,7 +112,11 @@ export class UsersService {
                 images: { take: 1, orderBy: { sortOrder: 'asc' } },
               },
             },
+            contractFile: {
+              select: { id: true, originalName: true, mimeType: true, size: true, createdAt: true },
+            },
             invoices: {
+              where: { deletedAt: null },
               orderBy: { dueDate: 'desc' },
               include: {
                 lineItems: {
@@ -123,6 +129,7 @@ export class UsersService {
           },
         },
         invoices: {
+          where: { deletedAt: null },
           orderBy: { dueDate: 'desc' },
           include: {
             lease: { include: { property: { select: { id: true, title: true, address: true } } } },
@@ -145,8 +152,15 @@ export class UsersService {
     });
     if (!tenant) throw new NotFoundException('Usuario no encontrado.');
 
+    const invoices = tenant.invoices.map((invoice) => this.withInvoiceBalance(invoice));
+    const leases = tenant.leases.map((lease) => ({
+      ...lease,
+      invoices: lease.invoices.map((invoice) => this.withInvoiceBalance(invoice)),
+    }));
     return {
       ...tenant,
+      leases,
+      invoices,
       email: tenant.email ?? tenant.user?.email ?? null,
       phone: tenant.phone ?? tenant.user?.phone ?? null,
       financial: this.financialSummary(tenant.invoices),
@@ -292,22 +306,29 @@ export class UsersService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     await this.prisma.invoice.updateMany({
-      where: { status: 'PENDING', dueDate: { lt: today } },
+      where: { status: 'PENDING', dueDate: { lt: today }, deletedAt: null },
       data: { status: 'OVERDUE' },
     });
   }
 
   private financialSummary(invoices: FinancialRecord[]) {
-    const pendingAmount = invoices
+    const activeInvoices = invoices.filter((invoice) => !invoice.deletedAt && invoice.status !== 'VOID');
+    const balanceOf = (invoice: FinancialRecord): number => {
+      const approved = (invoice.payments ?? [])
+        .filter((payment) => payment.status === 'APPROVED')
+        .reduce((sum, payment) => sum + payment.amount, 0);
+      return invoice.status === 'PAID' ? 0 : Math.max(invoice.amount - approved, 0);
+    };
+    const pendingAmount = activeInvoices
       .filter((invoice) => invoice.status === 'PENDING')
-      .reduce((sum, invoice) => sum + invoice.amount, 0);
-    const overdueAmount = invoices
+      .reduce((sum, invoice) => sum + balanceOf(invoice), 0);
+    const overdueAmount = activeInvoices
       .filter((invoice) => invoice.status === 'OVERDUE')
-      .reduce((sum, invoice) => sum + invoice.amount, 0);
-    const paidAmount = invoices
+      .reduce((sum, invoice) => sum + balanceOf(invoice), 0);
+    const paidAmount = activeInvoices
       .filter((invoice) => invoice.status === 'PAID')
       .reduce((sum, invoice) => sum + invoice.amount, 0);
-    const approvedPayments = invoices
+    const approvedPayments = activeInvoices
       .flatMap((invoice) => invoice.payments ?? [])
       .filter((payment) => payment.status === 'APPROVED')
       .reduce((sum, payment) => sum + payment.amount, 0);
@@ -316,7 +337,7 @@ export class UsersService {
       ? 'OVERDUE'
       : pendingAmount > 0
         ? 'PENDING'
-        : invoices.length > 0
+        : activeInvoices.length > 0
           ? 'PAID'
           : 'NO_CHARGES';
 
@@ -327,8 +348,18 @@ export class UsersService {
       overdueAmount,
       paidAmount,
       approvedPayments,
-      invoiceCount: invoices.length,
+      invoiceCount: activeInvoices.length,
     };
+  }
+
+  private withInvoiceBalance<T extends FinancialRecord>(invoice: T): T & { balance: number; approvedAmount: number } {
+    const approvedAmount = (invoice.payments ?? [])
+      .filter((payment) => payment.status === 'APPROVED')
+      .reduce((sum, payment) => sum + payment.amount, 0);
+    const balance = invoice.status === 'PAID' || invoice.status === 'VOID' || invoice.deletedAt
+      ? 0
+      : Math.max(invoice.amount - approvedAmount, 0);
+    return { ...invoice, approvedAmount, balance };
   }
 
   private currentPeriod(): Date {

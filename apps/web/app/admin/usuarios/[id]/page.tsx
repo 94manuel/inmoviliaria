@@ -3,10 +3,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { AdminNav } from '@/components/AdminNav';
 import { AdminAssignPropertyForm } from '@/components/AdminAssignPropertyForm';
+import { AdminLeaseContractForm } from '@/components/AdminLeaseContractForm';
 import { apiFetch } from '@/lib/api';
 import { assetUrl, fecha, pesos } from '@/lib/format';
 import { requireUser } from '@/lib/auth';
-import type { AdminUserDetail, Property, UserFinancialState } from '@/lib/types';
+import type { AdminUserDetail, AdminUserInvoice, Property, UserFinancialState } from '@/lib/types';
 
 export const metadata: Metadata = { title: 'Detalle del usuario' };
 export const dynamic = 'force-dynamic';
@@ -28,7 +29,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <div className="pageHeading compact">
             <span className="eyebrow">Administración · Usuarios</span>
             <h1>{user.name}</h1>
-            <p>Información personal, inmuebles asignados, obligaciones y trazabilidad de pagos.</p>
+            <p>Información personal, inmuebles, contratos firmados, obligaciones y trazabilidad de pagos.</p>
             <Link className="textLink" href="/admin/usuarios">← Volver al directorio</Link>
           </div>
 
@@ -67,9 +68,24 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <AdminAssignPropertyForm userId={user.id} properties={availableProperties} />
 
           <div className="card tableCard">
-            <div className="tableTitle"><h2>Inmuebles y contratos</h2><span>{user.leases.length} contratos</span></div>
+            <div className="tableTitle"><h2>Contratos firmados</h2><span>{user.leases.filter((lease) => lease.contractFile).length} PDF cargados</span></div>
+            <div className="contractAdminList">
+              {user.leases.map((lease) => <article className="contractAdminItem" key={lease.id}>
+                <div className="contractAdminHeading">
+                  <div><strong>{lease.property.title}</strong><p>{lease.property.address}</p></div>
+                  <span className={`status ${lease.active ? 'paid' : 'archived'}`}>{lease.active ? 'Contrato activo' : 'Contrato finalizado'}</span>
+                </div>
+                <p className="muted">Vigencia: {lease.startDate ? fecha(lease.startDate) : 'sin fecha inicial'}{lease.endDate ? ` – ${fecha(lease.endDate)}` : ''}</p>
+                <AdminLeaseContractForm leaseId={lease.id} userId={user.id} contractFile={lease.contractFile} />
+              </article>)}
+              {user.leases.length === 0 && <div className="empty">Este usuario todavía no tiene un contrato asociado a un inmueble.</div>}
+            </div>
+          </div>
+
+          <div className="card tableCard">
+            <div className="tableTitle"><h2>Inmuebles asignados</h2><span>{user.leases.length} contratos</span></div>
             <div className="responsiveTable"><table>
-              <thead><tr><th>Inmueble</th><th>Dirección</th><th>Contrato</th><th>Valor mensual</th><th>Novedades</th><th>Estado</th></tr></thead>
+              <thead><tr><th>Inmueble</th><th>Dirección</th><th>Vigencia</th><th>Valor mensual</th><th>Novedades</th><th>Estado</th></tr></thead>
               <tbody>{user.leases.map((lease) => (
                 <tr key={lease.id}>
                   <td className="propertyRow"><div className="thumb"><Image src={assetUrl(lease.property.images[0]?.url)} alt={lease.property.title} fill sizes="54px" /></div>{lease.property.title}</td>
@@ -86,7 +102,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
           <div className="card tableCard">
             <div className="tableTitle"><h2>Historial de facturación</h2><span>{user.invoices.length} facturas</span></div>
             <div className="responsiveTable"><table>
-              <thead><tr><th>Código</th><th>Inmueble</th><th>Periodo</th><th>Vencimiento</th><th>Valor</th><th>Estado</th><th>Pagado</th></tr></thead>
+              <thead><tr><th>Código</th><th>Inmueble</th><th>Periodo</th><th>Vencimiento</th><th>Facturado</th><th>Saldo</th><th>Estado</th><th>Pagado</th></tr></thead>
               <tbody>{user.invoices.map((invoice) => (
                 <tr key={invoice.id}>
                   <td>{invoice.code}</td>
@@ -94,10 +110,11 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                   <td>{fecha(invoice.period)}</td>
                   <td>{fecha(invoice.dueDate)}</td>
                   <td>{pesos(invoice.amount)}</td>
+                  <td>{pesos(invoice.balance ?? invoiceBalance(invoice))}</td>
                   <td><span className={`status ${invoice.status.toLowerCase()}`}>{invoiceStatus(invoice.status)}</span></td>
                   <td>{invoice.paidAt ? fecha(invoice.paidAt) : '—'}</td>
                 </tr>
-              ))}{user.invoices.length === 0 && <tr><td colSpan={7} className="muted">No hay facturas para este usuario.</td></tr>}</tbody>
+              ))}{user.invoices.length === 0 && <tr><td colSpan={8} className="muted">No hay facturas para este usuario.</td></tr>}</tbody>
             </table></div>
           </div>
 
@@ -121,6 +138,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       </div>
     </section>
   );
+}
+
+function invoiceBalance(invoice: AdminUserInvoice): number {
+  if (invoice.status === 'PAID' || invoice.status === 'VOID') return 0;
+  const approved = invoice.payments.filter((payment) => payment.status === 'APPROVED').reduce((sum, payment) => sum + payment.amount, 0);
+  return Math.max(invoice.amount - approved, 0);
 }
 
 function financialLabel(state: UserFinancialState): string {

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import type { User } from './types';
 
-const internalApi = () => process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+export const apiBaseUrl = () => process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export async function apiFetch<T>(path: string, init: RequestInit = {}, authenticated = false): Promise<T> {
   const headers = new Headers(init.headers);
@@ -10,7 +10,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, authenti
     const token = (await cookies()).get('inmo_token')?.value;
     if (token) headers.set('Authorization', `Bearer ${token}`);
   }
-  const response = await fetch(`${internalApi()}/api${path}`, { ...init, headers, cache: 'no-store' });
+  const response = await fetch(`${apiBaseUrl()}/api${path}`, { ...init, headers, cache: 'no-store' });
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: 'No fue posible procesar la solicitud.' }));
     const message = Array.isArray(error.message) ? error.message.join(', ') : error.message;

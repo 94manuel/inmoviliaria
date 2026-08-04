@@ -16,7 +16,9 @@ export class PaymentsService {
 
   async createIntent(invoiceId: string, userId: string) {
     const invoice = await this.invoices.findMine(invoiceId, userId);
-    if (invoice.status === 'PAID') throw new BadRequestException('Esta factura ya se encuentra pagada.');
+    if (invoice.status === 'PAID' || invoice.status === 'VOID' || invoice.balance <= 0) {
+      throw new BadRequestException('Esta factura no tiene saldo pendiente para pagar.');
+    }
     const reference = `INV-${invoice.code}-${randomUUID().slice(0, 8)}`;
     const paymentProvider = (process.env.PAYMENT_PROVIDER ?? 'mock').toLowerCase();
     const provider = paymentProvider === 'wompi'
@@ -30,13 +32,13 @@ export class PaymentsService {
     let checkoutUrl: string | null = null;
 
     if (provider === 'WOMPI') {
-      checkoutUrl = this.buildWompiCheckout(reference, invoice.amount);
+      checkoutUrl = this.buildWompiCheckout(reference, invoice.balance);
     }
     if (provider === 'CYBERVESTIGIO') {
-      checkoutUrl = this.buildCybervestigioCheckout(reference, invoice.amount, invoice.code);
+      checkoutUrl = this.buildCybervestigioCheckout(reference, invoice.balance, invoice.code);
     }
     const payment = await this.prisma.payment.create({
-      data: { reference, amount: invoice.amount, invoiceId, userId, tenantId: invoice.tenantId, provider, status: 'PENDING', checkoutUrl },
+      data: { reference, amount: invoice.balance, invoiceId, userId, tenantId: invoice.tenantId, provider, status: 'PENDING', checkoutUrl },
     });
     return { payment, provider, checkoutUrl };
   }

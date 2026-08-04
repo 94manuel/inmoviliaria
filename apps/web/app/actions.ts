@@ -197,6 +197,79 @@ export async function createInvoiceAction(_previous: ActionState, formData: Form
   }
 }
 
+export async function updateInvoiceAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const id = String(formData.get('id'));
+    const tenantId = String(formData.get('tenantId') ?? '');
+    const amount = Number(formData.get('amount'));
+    await apiFetch(`/admin/invoices/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        amount: Number.isFinite(amount) ? Math.max(0, Math.round(amount)) : undefined,
+        status: formData.get('status'),
+        period: formData.get('period'),
+        dueDate: formData.get('dueDate'),
+        note: formData.get('note'),
+      }),
+    }, true);
+    revalidatePath('/admin/facturas');
+    revalidatePath('/admin/usuarios');
+    if (tenantId) revalidatePath(`/admin/usuarios/${tenantId}`);
+    revalidatePath('/mi-cuenta');
+    return { success: 'La factura y su saldo fueron actualizados.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
+export async function deleteInvoiceAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const id = String(formData.get('id'));
+    const tenantId = String(formData.get('tenantId') ?? '');
+    await apiFetch(`/admin/invoices/${id}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason: formData.get('reason') }),
+    }, true);
+    revalidatePath('/admin/facturas');
+    revalidatePath('/admin/usuarios');
+    if (tenantId) revalidatePath(`/admin/usuarios/${tenantId}`);
+    revalidatePath('/mi-cuenta');
+    return { success: 'La factura fue eliminada del sistema visible. Su trazabilidad técnica se conserva.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
+export async function uploadLeaseContractAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const leaseId = String(formData.get('leaseId'));
+    const userId = String(formData.get('userId') ?? '');
+    formData.delete('leaseId');
+    formData.delete('userId');
+    await apiFetch(`/admin/leases/${leaseId}/contract`, { method: 'POST', body: formData }, true);
+    revalidatePath('/admin/usuarios');
+    if (userId) revalidatePath(`/admin/usuarios/${userId}`);
+    revalidatePath('/mi-cuenta');
+    return { success: 'El contrato firmado quedó disponible para el usuario.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
+export async function removeLeaseContractAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const leaseId = String(formData.get('leaseId'));
+    const userId = String(formData.get('userId') ?? '');
+    await apiFetch(`/admin/leases/${leaseId}/contract`, { method: 'DELETE' }, true);
+    revalidatePath('/admin/usuarios');
+    if (userId) revalidatePath(`/admin/usuarios/${userId}`);
+    revalidatePath('/mi-cuenta');
+    return { success: 'El PDF del contrato fue retirado.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
 export async function uploadFilesAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   try {
     await apiFetch('/admin/files', { method: 'POST', body: formData }, true);

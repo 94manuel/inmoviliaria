@@ -5,7 +5,7 @@ import type { Response } from 'express';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StorageService } from './storage.service.js';
 
-type UploadPurpose = 'PROPERTY_IMAGE' | 'GENERIC';
+type UploadPurpose = 'PROPERTY_IMAGE' | 'GENERIC' | 'LEASE_CONTRACT';
 
 @Injectable()
 export class FilesService {
@@ -16,14 +16,15 @@ export class FilesService {
 
   listAdmin() {
     return this.prisma.storedFile.findMany({
+      where: { purpose: { not: 'LEASE_CONTRACT' } },
       include: { createdBy: { select: { id: true, name: true, email: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async getPublicMetadata(id: string) {
-    const file = await this.prisma.storedFile.findUnique({
-      where: { id },
+    const file = await this.prisma.storedFile.findFirst({
+      where: { id, purpose: { not: 'LEASE_CONTRACT' } },
       select: {
         id: true,
         originalName: true,
@@ -51,19 +52,35 @@ export class FilesService {
     return uploaded ?? null;
   }
 
+  async uploadLeaseContract(file: Express.Multer.File, createdById?: string) {
+    const [uploaded] = await this.uploadMany([file], {
+      createdById,
+      purpose: 'LEASE_CONTRACT',
+      folder: 'lease-contracts',
+    });
+    return uploaded ?? null;
+  }
+
+  async removeStoredFile(file: { id: string; objectKey: string }): Promise<void> {
+    await this.storage.removeObject(file.objectKey).catch(() => undefined);
+    await this.prisma.storedFile.deleteMany({ where: { id: file.id } });
+  }
+
   async removeStoredFiles(files: Array<{ id: string; objectKey: string }>): Promise<void> {
     if (files.length === 0) return;
     await Promise.allSettled(files.map((file) => this.storage.removeObject(file.objectKey)));
     await this.prisma.storedFile.deleteMany({ where: { id: { in: files.map((file) => file.id) } } });
   }
 
-  async sendContent(id: string, response: Response, download = false): Promise<void> {
+  async sendContent(id: string, response: Response, download = false, allowSensitive = false): Promise<void> {
     const file = await this.prisma.storedFile.findUnique({ where: { id } });
-    if (!file) throw new NotFoundException('Archivo no encontrado.');
+    if (!file || (file.purpose === 'LEASE_CONTRACT' && !allowSensitive)) {
+      throw new NotFoundException('Archivo no encontrado.');
+    }
     const stream = await this.storage.getObjectStream(file.objectKey);
     response.setHeader('Content-Type', file.mimeType);
     response.setHeader('Content-Length', String(file.size));
-    response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    response.setHeader('Cache-Control', file.purpose === 'LEASE_CONTRACT' ? 'private, no-store' : 'public, max-age=31536000, immutable');
     response.setHeader('Content-Disposition', contentDisposition(file.originalName, download));
     await pipeline(stream, response);
   }
@@ -75,7 +92,9 @@ export class FilesService {
     if (files.length === 0) return [];
     const prefix = options.purpose === 'PROPERTY_IMAGE'
       ? 'property-images'
-      : `files/${sanitizeFolder(options.folder)}`;
+      : options.purpose === 'LEASE_CONTRACT'
+        ? 'lease-contracts'
+        : `files/${sanitizeFolder(options.folder)}`;
     const uploadedObjects: Array<{ bucket: string; objectKey: string; mimeType: string; originalName: string; size: number }> = [];
     try {
       for (const file of files) {
@@ -91,7 +110,9 @@ export class FilesService {
           mimeType: file.mimeType,
           size: file.size,
           purpose: options.purpose,
-          publicPath: `/api/files/${id}/content`,
+          publicPath: options.purpose === 'LEASE_CONTRACT'
+            ? `/api/leases/contracts/${id}`
+            : `/api/files/${id}/content`,
           createdById: options.createdById,
         };
       });

@@ -42,6 +42,11 @@ export class AuthService {
             phone: phone ?? existingTenant.phone,
           },
         });
+        await Promise.all([
+          tx.lease.updateMany({ where: { tenantId: existingTenant.id }, data: { userId: created.id } }),
+          tx.invoice.updateMany({ where: { tenantId: existingTenant.id }, data: { userId: created.id } }),
+          tx.payment.updateMany({ where: { tenantId: existingTenant.id }, data: { userId: created.id } }),
+        ]);
       } else {
         await tx.tenant.create({
           data: {

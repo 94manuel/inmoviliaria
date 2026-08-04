@@ -2,7 +2,7 @@ export type Role = 'ADMIN' | 'USER';
 export type PropertyStatus = 'AVAILABLE' | 'RENTED' | 'ARCHIVED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'OVERDUE' | 'VOID';
 export type ChargeCatalogType = 'SERVICE' | 'PRODUCT';
-export type StoredFilePurpose = 'PROPERTY_IMAGE' | 'GENERIC';
+export type StoredFilePurpose = 'PROPERTY_IMAGE' | 'GENERIC' | 'LEASE_CONTRACT';
 
 export interface ChargeCatalogItem {
   id: string;
@@ -94,10 +94,12 @@ export interface Invoice {
   period: string;
   dueDate: string;
   amount: number;
+  balance: number;
+  approvedAmount?: number;
   status: InvoiceStatus;
   paidAt?: string | null;
   user?: { name: string; email: string } | null;
-  tenant?: { name: string; email?: string | null } | null;
+  tenant?: { id?: string; name: string; email?: string | null } | null;
   lease: { id?: string; property: { title: string; address?: string }; user?: { name: string } };
   lineItems?: Array<{
     id: string;
@@ -106,14 +108,43 @@ export interface Invoice {
     total: number;
     catalogItem: { code: string; name: string; type: ChargeCatalogType };
   }>;
-  payments?: Array<{ reference: string; status: string; provider: string }>;
+  payments?: Array<{ id?: string; reference: string; amount: number; status: string; provider: string; createdAt?: string }>;
+  adminNotes?: string | null;
+  deletedReason?: string | null;
 }
 
 export interface Lease {
   id: string;
+  contractFile?: ContractFile | null;
   user?: { id: string; name: string; email: string } | null;
   tenant?: { id: string; name: string; email?: string | null } | null;
   property: { title: string; monthlyRent: number };
+}
+
+export interface ContractFile {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
+export interface UserLease {
+  id: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  active: boolean;
+  status: string;
+  contractUploadedAt?: string | null;
+  contractFile?: ContractFile | null;
+  property: {
+    id: string;
+    title: string;
+    address: string;
+    neighborhood: string;
+    city: string;
+    status: PropertyStatus;
+  };
 }
 
 export interface ContactMessage {
@@ -235,6 +266,7 @@ export interface AdminUserInvoice {
   period: string;
   dueDate: string;
   amount: number;
+  balance?: number;
   status: InvoiceStatus;
   paidAt?: string | null;
   lease: { property: { id: string; title: string; address: string } };
@@ -276,6 +308,8 @@ export interface AdminUserDetail {
     legacyCode?: string | null;
     novelty?: string | null;
     observations?: string | null;
+    contractUploadedAt?: string | null;
+    contractFile?: ContractFile | null;
     createdAt: string;
     property: {
       id: string;

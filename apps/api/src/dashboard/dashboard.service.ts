@@ -8,9 +8,9 @@ export class DashboardService {
   async metrics() {
     const [availableProperties, pendingInvoices, newContacts, paid] = await Promise.all([
       this.prisma.property.count({ where: { status: 'AVAILABLE', published: true } }),
-      this.prisma.invoice.count({ where: { status: { in: ['PENDING', 'OVERDUE'] } } }),
+      this.prisma.invoice.count({ where: { status: { in: ['PENDING', 'OVERDUE'] }, deletedAt: null } }),
       this.prisma.contactMessage.count({ where: { status: 'NEW' } }),
-      this.prisma.invoice.aggregate({ _sum: { amount: true }, where: { status: 'PAID' } }),
+      this.prisma.invoice.aggregate({ _sum: { amount: true }, where: { status: 'PAID', deletedAt: null } }),
     ]);
     return {
       availableProperties,
