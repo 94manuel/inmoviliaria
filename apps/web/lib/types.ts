@@ -20,6 +20,35 @@ export interface User {
   role: Role;
 }
 
+export interface TenantOption {
+  id: string;
+  sourceKey?: string | null;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  documentNumber?: string | null;
+  userId?: string | null;
+  leases: Array<{
+    id: string;
+    property: { id: string; title: string; address: string };
+  }>;
+}
+
+export interface PropertyLeaseAssignment {
+  id: string;
+  startDate?: string | null;
+  endDate?: string | null;
+  expectedMonthlyPayment?: number | null;
+  tenant?: {
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    documentNumber?: string | null;
+  } | null;
+  user?: { id: string; name: string; email: string } | null;
+}
+
 export interface PropertyImage { id: string; url: string; alt: string; sortOrder: number }
 export interface Property {
   id: string;
@@ -42,6 +71,7 @@ export interface Property {
   published: boolean;
   status: PropertyStatus;
   images: PropertyImage[];
+  leases?: PropertyLeaseAssignment[];
   _count?: { leases: number };
 }
 
@@ -146,4 +176,120 @@ export interface ImportBatch {
   startedAt: string;
   finishedAt?: string | null;
   _count: { records: number };
+}
+
+export type UserFinancialState = 'NO_CHARGES' | 'PENDING' | 'OVERDUE' | 'PAID';
+
+export interface UserFinancialSummary {
+  state: UserFinancialState;
+  outstandingAmount: number;
+  pendingAmount: number;
+  overdueAmount: number;
+  paidAmount: number;
+  approvedPayments: number;
+  invoiceCount: number;
+}
+
+export interface AdminUserSummary {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  documentNumber?: string | null;
+  webAccount?: {
+    id: string;
+    email: string;
+    role: Role;
+    createdAt: string;
+  } | null;
+  activeLease?: {
+    id: string;
+    property: { id: string; title: string; address: string; status: PropertyStatus };
+  } | null;
+  counts: { leases: number; invoices: number; payments: number };
+  financial: UserFinancialSummary;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminUserPayment {
+  id: string;
+  reference: string;
+  amount: number;
+  currency: string;
+  provider: string;
+  status: string;
+  bankReference?: string | null;
+  payerName?: string | null;
+  createdAt: string;
+  invoice?: {
+    id: string;
+    code: string;
+    lease: { property: { id: string; title: string } };
+  };
+}
+
+export interface AdminUserInvoice {
+  id: string;
+  code: string;
+  period: string;
+  dueDate: string;
+  amount: number;
+  status: InvoiceStatus;
+  paidAt?: string | null;
+  lease: { property: { id: string; title: string; address: string } };
+  payments: AdminUserPayment[];
+  lineItems: Array<{
+    id: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    catalogItem: { name: string; code: string; type: ChargeCatalogType };
+  }>;
+}
+
+export interface AdminUserDetail {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  documentNumber?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string | null;
+    role: Role;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+  aliases: Array<{ id: string; alias: string }>;
+  leases: Array<{
+    id: string;
+    startDate?: string | null;
+    endDate?: string | null;
+    active: boolean;
+    status: string;
+    expectedMonthlyPayment?: number | null;
+    legacyCode?: string | null;
+    novelty?: string | null;
+    observations?: string | null;
+    createdAt: string;
+    property: {
+      id: string;
+      title: string;
+      address: string;
+      neighborhood: string;
+      city: string;
+      monthlyRent: number;
+      status: PropertyStatus;
+      images: PropertyImage[];
+    };
+    invoices: AdminUserInvoice[];
+  }>;
+  invoices: AdminUserInvoice[];
+  payments: AdminUserPayment[];
+  financial: UserFinancialSummary;
 }

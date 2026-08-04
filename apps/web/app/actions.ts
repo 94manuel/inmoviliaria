@@ -73,13 +73,73 @@ export async function createPropertyAction(_previous: ActionState, formData: For
   }
 }
 
+export async function updatePropertyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const id = String(formData.get('id'));
+    formData.delete('id');
+    await apiFetch(`/admin/properties/${id}`, { method: 'PATCH', body: formData }, true);
+    revalidatePath('/admin/inmuebles');
+    revalidatePath(`/admin/inmuebles/${id}/editar`);
+    revalidatePath('/inmuebles');
+    revalidatePath('/');
+    return { success: 'El inmueble fue actualizado correctamente.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
 export async function deletePropertyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   try {
     await apiFetch(`/admin/properties/${String(formData.get('id'))}`, { method: 'DELETE' }, true);
     revalidatePath('/admin/inmuebles');
     revalidatePath('/inmuebles');
     revalidatePath('/');
-    return { success: 'El inmueble, sus archivos y sus registros asociados fueron eliminados definitivamente.' };
+    return { success: 'El inmueble fue retirado del catálogo. Cuando existe historial, queda archivado para conservar contratos, facturas y pagos.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
+
+export async function createAdminUserAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    await apiFetch('/admin/users', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: formData.get('name'),
+        email: formData.get('email'),
+        phone: formData.get('phone'),
+        documentNumber: formData.get('documentNumber'),
+      }),
+    }, true);
+    revalidatePath('/admin/usuarios');
+    return { success: 'El usuario fue creado correctamente.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
+}
+
+export async function assignPropertyToUserAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const userId = String(formData.get('userId'));
+    await apiFetch(`/admin/users/${userId}/assign-property`, {
+      method: 'POST',
+      body: JSON.stringify({
+        propertyId: formData.get('propertyId'),
+        leaseStartDate: formData.get('leaseStartDate'),
+        leaseEndDate: formData.get('leaseEndDate'),
+        expectedMonthlyPayment: formData.get('expectedMonthlyPayment'),
+        createCurrentInvoice: formData.get('createCurrentInvoice') === 'true',
+        invoiceDueDate: formData.get('invoiceDueDate'),
+      }),
+    }, true);
+    revalidatePath('/admin/usuarios');
+    revalidatePath(`/admin/usuarios/${userId}`);
+    revalidatePath('/admin/inmuebles');
+    revalidatePath('/admin/facturas');
+    revalidatePath('/inmuebles');
+    revalidatePath('/');
+    return { success: 'El inmueble fue asignado y retirado del listado de disponibles.' };
   } catch (error) {
     return { error: messageOf(error) };
   }

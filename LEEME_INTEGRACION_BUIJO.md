@@ -4,7 +4,7 @@ Esta versión incorpora al proyecto principal las funcionalidades de los dos ZIP
 
 ## Funcionalidades incorporadas
 
-1. **Importación de arrendamientos desde Excel/JSON**
+1. **Importación de arrendamientos desde datos históricos normalizados**
    - Archivo normalizado de 92 registros.
    - Propietarios, arrendatarios, contratos, alias de pagadores y cuentas receptoras.
    - Auditoría mediante `ImportBatch` e `ImportRecord`.
@@ -22,23 +22,24 @@ Esta versión incorpora al proyecto principal las funcionalidades de los dos ZIP
    - Historial auditable de notificaciones bancarias.
 
 3. **Panel administrativo**
-   - Nueva sección `/admin/conciliacion`.
-   - Consulta de cuentas receptoras, lotes importados y notificaciones de pago.
+   - Sección `/admin/conciliacion` para cuentas receptoras y notificaciones.
+   - Sección `/admin/usuarios` con todos los perfiles históricos y las cuentas web.
+   - Detalle de información personal, inmuebles, facturas, saldos y pagos.
+   - Asignación de inmuebles disponibles con creación opcional del cobro corriente.
 
-4. **Eliminación definitiva de inmuebles**
-   - Todos los inmuebles del panel tienen el botón `Eliminar`.
-   - La confirmación elimina el inmueble y, cuando existan, sus contratos, facturas, partidas y pagos asociados.
-   - También elimina de MinIO las imágenes y la foto 360 asociadas.
-   - Las notificaciones bancarias se conservan como auditoría, pero quedan sin vínculos al inmueble eliminado.
+4. **Retiro seguro de inmuebles**
+   - Todos los inmuebles del panel tienen la opción `Retirar`.
+   - Los inmuebles sin historial se eliminan junto con sus archivos.
+   - Cuando existen contratos, facturas o pagos, el inmueble se archiva y deja de publicarse para conservar la trazabilidad completa.
 
 ## Archivos de integración
 
 - `integrations/n8n/`: workflows importables en n8n.
-- `integrations/excel/`: Excel normalizado y JSON de importación.
+- `integrations/datos/`: datos normalizados y JSON de importación.
 - `integrations/docs/`: contratos y documentación de los paquetes originales.
 - `apps/api/scripts/import-arrendamientos.ts`: importador Prisma.
 - `k8s/12-integration-migrate-job.yaml`: migración de base de datos.
-- `k8s/13-import-arrendamientos-job.yaml`: importación opcional.
+- `k8s/13-cargar-usuarios-historicos-job.yaml`: carga idempotente de usuarios y contratos históricos.
 
 ## Variables obligatorias
 

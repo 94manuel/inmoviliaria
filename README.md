@@ -147,6 +147,9 @@ El backend valida el checksum dinámicamente con las propiedades enviadas por Wo
 | POST | `/api/admin/files` | Admin | Subir archivos genéricos |
 | GET | `/api/files/:id/content` | Público | Abrir o descargar archivo |
 | GET | `/api/admin/invoices` | Admin | Consultar facturas |
+| GET | `/api/admin/users` | Admin | Listar usuarios, cartera e inmueble activo |
+| GET | `/api/admin/users/:id` | Admin | Ver perfil, contratos, facturas y pagos |
+| POST | `/api/admin/users/:id/assign-property` | Admin | Asignar inmueble y crear cobro inicial |
 
 ## Estructura
 
@@ -172,3 +175,19 @@ https://n8n.asesoriainmobiliariajb.com
 ```
 
 La instalación utiliza el mismo clúster y PostgreSQL, pero mantiene base de datos, Secret, Service, PVC e Ingress independientes. Consulte `INSTALAR_N8N.md`.
+
+## Gestión de inmuebles
+
+El módulo administrativo permite crear inmuebles sin fotografía —en ese caso utiliza una imagen predeterminada—, editar los datos y recursos multimedia, y asignar cada inmueble a un arrendatario existente o nuevo. Los arrendatarios importados desde datos históricos están disponibles en el selector de asignación.
+
+## Administración de usuarios y cartera
+
+El panel `/admin/usuarios` unifica los perfiles históricos con las cuentas registradas en la web. Desde allí el administrador puede:
+
+- buscar usuarios por nombre, correo, documento o teléfono;
+- consultar toda su información y si tiene cuenta de acceso web;
+- asignar un inmueble disponible y crear el cobro del periodo actual;
+- comprobar saldos pendientes, facturas vencidas y pagos aprobados;
+- revisar el historial completo de contratos, facturas y pagos.
+
+Cuando se asigna un inmueble, su estado cambia a `RENTED`, por lo que deja de mostrarse en el catálogo público de disponibles. Las cuentas nuevas se vinculan automáticamente con un perfil histórico cuando el correo coincide.

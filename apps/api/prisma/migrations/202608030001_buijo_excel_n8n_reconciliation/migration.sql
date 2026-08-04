@@ -1,4 +1,4 @@
--- Integración BUIJO: Excel normalizado, conciliación Bancolombia/n8n y entidades de auditoría.
+-- Integración BUIJO: datos normalizados, conciliación Bancolombia/n8n y entidades de auditoría.
 
 DO $$
 BEGIN

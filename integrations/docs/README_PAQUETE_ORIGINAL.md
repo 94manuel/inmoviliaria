@@ -1,8 +1,8 @@
-# BUIJO — Integración Excel + Prisma + n8n
+# BUIJO — Integración Datos + Prisma + n8n
 
-Este paquete reemplaza el cruce directo e inseguro contra un Excel por una arquitectura auditable:
+Este paquete reemplaza el cruce directo e inseguro contra un archivo histórico por una arquitectura auditable:
 
-1. El Excel empresarial se normaliza.
+1. El registro histórico se normaliza.
 2. Los datos se importan a Prisma/PostgreSQL.
 3. n8n recibe el correo de Outlook y extrae pagador, valor, cuenta y referencia.
 4. La API Prisma valida además el remitente contra `BANCOLOMBIA_ALLOWED_SENDERS` y busca una factura pendiente por cuenta, valor y nombre.
@@ -21,7 +21,7 @@ Este paquete reemplaza el cruce directo e inseguro contra un Excel por una arqui
 
 ## Archivos principales
 
-- `BUIJO_Base_Normalizada_Arrendamientos.xlsx`
+- `BUIJO_Datos_Historicos_Arrendamientos.xlsx`
 - `data/arrendamientos_normalizados.json`
 - `prisma/schema.prisma`
 - `MIGRACION_DESDE_ESQUEMA_ACTUAL.md`
@@ -37,7 +37,7 @@ Este paquete reemplaza el cruce directo e inseguro contra un Excel por una arqui
 
 ```bash
 npx prisma format
-npx prisma migrate dev --name excel_arrendamientos_y_conciliacion_bancaria
+npx prisma migrate dev --name datos_arrendamientos_y_conciliacion_bancaria
 npx prisma generate
 ```
 
@@ -66,7 +66,7 @@ Valor: el mismo N8N_PAYMENTS_API_KEY
 
 ## Advertencia esencial
 
-El Excel no permite vincular de forma confiable cada arrendamiento con una cuenta Bancolombia.  
+La fuente histórica no permite vincular de forma confiable cada arrendamiento con una cuenta Bancolombia.  
 La cuenta valida que el abono ingresó a un producto autorizado; la identificación del arrendatario se realiza por factura pendiente, valor y nombre/alias del pagador.
 
 Los 32 registros marcados deben revisarse antes de permitir conciliación automática.

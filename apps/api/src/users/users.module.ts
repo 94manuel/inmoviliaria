@@ -1,5 +1,10 @@
 import { Module } from '@nestjs/common';
+import { AdminUsersController } from './admin-users.controller.js';
 import { UsersService } from './users.service.js';
 
-@Module({ providers: [UsersService], exports: [UsersService] })
+@Module({
+  controllers: [AdminUsersController],
+  providers: [UsersService],
+  exports: [UsersService],
+})
 export class UsersModule {}

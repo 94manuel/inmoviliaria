@@ -1,7 +1,7 @@
 export const publicApiUrl = () => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export const assetUrl = (path?: string) => {
-  if (!path) return '/property-placeholder.svg';
+  if (!path || path === '/property-placeholder.svg') return '/property-placeholder.svg';
   return /^https?:\/\//i.test(path) ? path : `${publicApiUrl()}${path}`;
 };
 

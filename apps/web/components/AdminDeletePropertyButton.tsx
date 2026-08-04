@@ -12,14 +12,14 @@ export function AdminDeletePropertyButton({ id, title }: { id: string; title: st
         action={action}
         onSubmit={(event) => {
           const accepted = window.confirm(
-            `¿Eliminar definitivamente “${title}”? También se eliminarán sus contratos, facturas y pagos asociados. Esta acción no se puede deshacer.`,
+            `¿Retirar “${title}” del catálogo? Si tiene contratos, facturas o pagos, quedará archivado para conservar todo el historial.`,
           );
           if (!accepted) event.preventDefault();
         }}
       >
         <input type="hidden" name="id" value={id} />
         <button className="textButton danger" disabled={pending}>
-          {pending ? 'Eliminando…' : 'Eliminar'}
+          {pending ? 'Retirando…' : 'Retirar'}
         </button>
       </form>
       {state.error && <small className="alert error">{state.error}</small>}

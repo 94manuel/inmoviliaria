@@ -1,10 +1,14 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { createPropertyAction, type ActionState } from '@/app/actions';
+import { PropertyAssignmentFields, type PropertyAssignmentMode } from './PropertyAssignmentFields';
+import type { TenantOption } from '@/lib/types';
 
-export function AdminPropertyForm() {
+export function AdminPropertyForm({ tenants }: { tenants: TenantOption[] }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(createPropertyAction, {});
+  const [assignmentMode, setAssignmentMode] = useState<PropertyAssignmentMode>('NONE');
+
   return (
     <form className="form adminForm card" action={action}>
       <h2>Publicar inmueble</h2>
@@ -20,11 +24,21 @@ export function AdminPropertyForm() {
         <label>Habitaciones<input name="bedrooms" type="number" min="0" required /></label><label>Baños<input name="bathrooms" type="number" min="0" required /></label><label>Área m²<input name="areaM2" type="number" min="1" required /></label><label>Parqueaderos<input name="parking" type="number" min="0" defaultValue="0" required /></label>
       </div>
       <label>Características <span className="hint">separadas por coma</span><input name="features" placeholder="Balcón, vigilancia, pet friendly" /></label>
-      <label>Fotografías <span className="hint">JPG, PNG o WEBP; máximo 10 archivos de 5 MB (70 MB en total junto con la foto 360)</span><input type="file" accept="image/jpeg,image/png,image/webp" name="photos" multiple /></label>
+      <label>
+        Fotografías <span className="hint">Opcionales. Si no subes ninguna, se mostrará automáticamente una imagen predeterminada. JPG, PNG o WEBP; máximo 10 archivos de 5 MB.</span>
+        <input type="file" accept="image/jpeg,image/png,image/webp" name="photos" multiple />
+      </label>
       <div className="twoCols">
-        <label>Foto 360 <span className="hint">Panorámica equirectangular JPG, PNG o WEBP; máximo 15 MB</span><input name="tour360" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+        <label>Foto 360 <span className="hint">Opcional; máximo 15 MB</span><input name="tour360" type="file" accept="image/jpeg,image/png,image/webp" /></label>
         <label>Video <span className="hint">URL de YouTube, Vimeo o archivo MP4/WebM</span><input name="videoUrl" type="url" placeholder="https://..." /></label>
       </div>
+
+      <PropertyAssignmentFields
+        tenants={tenants}
+        mode={assignmentMode}
+        onModeChange={setAssignmentMode}
+      />
+
       <input type="hidden" name="published" value="true" />
       {state.error && <p className="alert error">{state.error}</p>}
       {state.success && <p className="alert success">{state.success}</p>}

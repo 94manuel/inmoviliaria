@@ -11,6 +11,7 @@ import { PaymentsModule } from './payments/payments.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { TenantsModule } from './tenants/tenants.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module.js';
     PropertiesModule,
     NewsModule,
     StorageModule,
+    TenantsModule,
     ContactsModule,
     LeasesModule,
     InvoicesModule,

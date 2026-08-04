@@ -131,7 +131,7 @@ kubectl delete job asesoria-import-arrendamientos \
   --ignore-not-found
 
 sed "s|asesoria-inmobiliaria-api:local|asesoria-inmobiliaria-api:$RELEASE|" \
-  k8s/13-import-arrendamientos-job.yaml \
+  k8s/13-cargar-usuarios-historicos-job.yaml \
   | kubectl apply -f -
 
 kubectl wait --for=condition=complete \
@@ -143,7 +143,7 @@ kubectl logs job/asesoria-import-arrendamientos \
   -n asesoria-inmobiliaria
 ```
 
-Por defecto `IMPORT_CREATE_CURRENT_INVOICES=false`; el importador no crea facturas corrientes hasta que se habilite explícitamente.
+La configuración vigente usa `IMPORT_CREATE_CURRENT_INVOICES=true` para crear el cobro corriente de los contratos activos que aún no tienen factura del periodo.
 
 ## 8. Importar el workflow n8n
 
@@ -178,4 +178,4 @@ https://asesoriainmobiliariajb.com/admin/conciliacion
 https://asesoriainmobiliariajb.com/admin/inmuebles
 ```
 
-Pruebe la eliminación de un inmueble y confirme que desaparece del panel y del catálogo. Cuando tenga contratos, facturas o pagos asociados, la confirmación también elimina esos registros en cascada.
+Pruebe el retiro de un inmueble y confirme que desaparece del catálogo público. Si tiene contratos, facturas o pagos, debe quedar archivado para conservar el historial; si no tiene historial, puede eliminarse definitivamente.

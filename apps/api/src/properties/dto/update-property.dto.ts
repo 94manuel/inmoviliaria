@@ -14,58 +14,69 @@ import {
 const emptyToUndefined = ({ value }: { value: unknown }) =>
   typeof value === 'string' && value.trim() === '' ? undefined : value;
 
-export class CreatePropertyDto {
+export class UpdatePropertyDto {
+  @IsOptional()
   @IsString()
-  @MinLength(5)
-  title!: string;
+  @MinLength(1)
+  title?: string;
 
+  @IsOptional()
   @IsString()
-  @MinLength(30)
-  description!: string;
+  description?: string;
 
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  monthlyRent!: number;
-
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  administrationFee!: number;
+  monthlyRent?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  deposit!: number;
+  administrationFee?: number;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  deposit?: number;
+
+  @IsOptional()
   @IsString()
-  city!: string;
+  city?: string;
 
+  @IsOptional()
   @IsString()
-  neighborhood!: string;
+  neighborhood?: string;
 
+  @IsOptional()
   @IsString()
-  address!: string;
+  address?: string;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  bedrooms!: number;
+  bedrooms?: number;
 
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  bathrooms!: number;
+  bathrooms?: number;
 
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  areaM2!: number;
-
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  parking!: number;
+  areaM2?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  parking?: number;
 
   @IsOptional()
   @IsString()
@@ -82,8 +93,16 @@ export class CreatePropertyDto {
   published?: boolean;
 
   @IsOptional()
-  @IsIn(['NONE', 'EXISTING', 'NEW'])
-  assignmentMode?: 'NONE' | 'EXISTING' | 'NEW';
+  @IsIn(['KEEP', 'APPEND', 'REPLACE', 'DEFAULT'])
+  imageMode?: 'KEEP' | 'APPEND' | 'REPLACE' | 'DEFAULT';
+
+  @IsOptional()
+  @IsIn(['KEEP', 'REPLACE', 'REMOVE'])
+  tour360Mode?: 'KEEP' | 'REPLACE' | 'REMOVE';
+
+  @IsOptional()
+  @IsIn(['UNCHANGED', 'NONE', 'EXISTING', 'NEW'])
+  assignmentMode?: 'UNCHANGED' | 'NONE' | 'EXISTING' | 'NEW';
 
   @IsOptional()
   @Transform(emptyToUndefined)

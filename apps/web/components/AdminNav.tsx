@@ -6,6 +6,7 @@ export function AdminNav() {
       <p className="navLabel">Panel administrativo</p>
       <Link href="/admin">Resumen</Link>
       <Link href="/admin/inmuebles">Inmuebles</Link>
+      <Link href="/admin/usuarios">Usuarios</Link>
       <Link href="/admin/noticias">Noticias</Link>
       <Link href="/admin/archivos">Archivos</Link>
       <Link href="/admin/facturas">Facturas</Link>

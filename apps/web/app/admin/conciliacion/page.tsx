@@ -18,7 +18,7 @@ export default async function ReconciliationPage() {
 
   return (
     <section className="section pageTop"><div className="container adminLayout"><AdminNav /><div className="adminContent">
-      <div className="pageHeading compact"><span className="eyebrow">Automatización n8n</span><h1>Conciliación Bancolombia</h1><p>Consulta cuentas receptoras, importaciones desde Excel y notificaciones procesadas.</p></div>
+      <div className="pageHeading compact"><span className="eyebrow">Automatización n8n</span><h1>Conciliación Bancolombia</h1><p>Consulta cuentas receptoras, cargas históricas de datos y notificaciones procesadas.</p></div>
 
       <div className="card tableCard"><div className="tableTitle"><h2>Cuentas receptoras</h2><span>{accounts.length} configuradas</span></div>
         <div className="responsiveTable"><table><thead><tr><th>Banco</th><th>Cuenta</th><th>Contratos</th><th>Notificaciones</th><th>Estado</th></tr></thead><tbody>
@@ -27,7 +27,7 @@ export default async function ReconciliationPage() {
         </tbody></table></div>
       </div>
 
-      <div className="card tableCard"><div className="tableTitle"><h2>Importaciones Excel</h2><span>{imports.length} lotes</span></div>
+      <div className="card tableCard"><div className="tableTitle"><h2>Cargas históricas</h2><span>{imports.length} lotes</span></div>
         <div className="responsiveTable"><table><thead><tr><th>Archivo</th><th>Inicio</th><th>Importados</th><th>Revisión</th><th>Estado</th></tr></thead><tbody>
           {imports.map((batch) => <tr key={batch.id}><td>{batch.sourceFile}</td><td>{fecha(batch.startedAt)}</td><td>{batch.importedRows}/{batch.totalRows}</td><td>{batch.reviewRows}</td><td><span className={`status ${batch.status === 'COMPLETED' ? 'paid' : batch.status === 'FAILED' ? 'overdue' : 'pending'}`}>{batch.status}</span></td></tr>)}
           {imports.length === 0 && <tr><td colSpan={5}>Todavía no se ha ejecutado el importador de arrendamientos.</td></tr>}

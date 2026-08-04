@@ -19,14 +19,41 @@ export class AuthService {
     if (await this.users.findByEmail(email)) {
       throw new ConflictException('El correo ya se encuentra registrado.');
     }
-    const user = await this.prisma.user.create({
-      data: {
-        name: dto.name.trim(),
-        email,
-        phone: dto.phone?.trim(),
-        passwordHash: await bcrypt.hash(dto.password, 12),
-        role: 'USER',
-      },
+    const name = dto.name.trim();
+    const phone = dto.phone?.trim() || undefined;
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { name, email, phone, passwordHash, role: 'USER' },
+      });
+
+      const existingTenant = await tx.tenant.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' }, userId: null },
+        orderBy: { createdAt: 'asc' },
+      });
+      if (existingTenant) {
+        await tx.tenant.update({
+          where: { id: existingTenant.id },
+          data: {
+            userId: created.id,
+            name,
+            normalizedName: this.normalize(name),
+            email,
+            phone: phone ?? existingTenant.phone,
+          },
+        });
+      } else {
+        await tx.tenant.create({
+          data: {
+            userId: created.id,
+            name,
+            normalizedName: this.normalize(name),
+            email,
+            phone,
+          },
+        });
+      }
+      return created;
     });
     return this.issueToken(user);
   }
@@ -37,6 +64,15 @@ export class AuthService {
       throw new UnauthorizedException('Correo o contraseña inválidos.');
     }
     return this.issueToken(user);
+  }
+
+  private normalize(value: string): string {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
   }
 
   private async issueToken(user: { id: string; email: string; name: string; role: 'ADMIN' | 'USER' }) {

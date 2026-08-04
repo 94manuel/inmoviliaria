@@ -75,7 +75,7 @@ const dueDateForPeriod = (period: Date) => {
 
 async function main() {
   const inputPath = resolve(
-    process.argv[2] ?? "../../integrations/excel/arrendamientos_normalizados.json",
+    process.argv[2] ?? "../../integrations/datos/arrendamientos_normalizados.json",
   );
   const raw = await readFile(inputPath);
   const checksum = createHash("sha256").update(raw).digest("hex");
@@ -216,24 +216,39 @@ async function main() {
           },
         });
 
-        const tenant = await tx.tenant.upsert({
-          where: { sourceKey: `EXCEL:${row.legacyCode}` },
-          update: {
-            name: row.tenantName,
-            normalizedName: row.tenantNormalized || normalize(row.tenantName),
-            documentNumber: row.tenantDocument,
-            phone: row.tenantPhone,
-            email: row.tenantEmail,
-          },
-          create: {
-            sourceKey: `EXCEL:${row.legacyCode}`,
-            name: row.tenantName,
-            normalizedName: row.tenantNormalized || normalize(row.tenantName),
-            documentNumber: row.tenantDocument,
-            phone: row.tenantPhone,
-            email: row.tenantEmail,
-          },
-        });
+        const sourceKey = `LEGACY:${row.legacyCode}`;
+        const normalizedEmail = row.tenantEmail?.trim().toLowerCase() || null;
+        const [tenantBySource, linkedUser] = await Promise.all([
+          tx.tenant.findUnique({ where: { sourceKey } }),
+          normalizedEmail
+            ? tx.user.findUnique({ where: { email: normalizedEmail }, include: { tenantProfile: true } })
+            : Promise.resolve(null),
+        ]);
+
+        const tenantData = {
+          name: row.tenantName,
+          normalizedName: row.tenantNormalized || normalize(row.tenantName),
+          documentNumber: row.tenantDocument,
+          phone: row.tenantPhone,
+          email: normalizedEmail,
+        };
+
+        const tenant = tenantBySource
+          ? await tx.tenant.update({
+              where: { id: tenantBySource.id },
+              data: {
+                ...tenantData,
+                userId: tenantBySource.userId ?? (linkedUser?.tenantProfile ? undefined : linkedUser?.id),
+              },
+            })
+          : linkedUser?.tenantProfile
+            ? await tx.tenant.update({
+                where: { id: linkedUser.tenantProfile.id },
+                data: tenantData,
+              })
+            : await tx.tenant.create({
+                data: { ...tenantData, sourceKey, userId: linkedUser?.id },
+              });
 
         const leaseStatus = LeaseStatus[row.leaseStatus] ?? LeaseStatus.LEGAL_REVIEW;
         const lease = await tx.lease.upsert({
@@ -241,6 +256,7 @@ async function main() {
           update: {
             propertyId: property.id,
             tenantId: tenant.id,
+            userId: tenant.userId,
             startDate: parseDate(row.leaseStartDate),
             endDate: parseDate(row.leaseEndDate),
             active: leaseStatus !== LeaseStatus.ENDED,
@@ -261,6 +277,7 @@ async function main() {
             sourceRow: row.sourceRow,
             propertyId: property.id,
             tenantId: tenant.id,
+            userId: tenant.userId,
             startDate: parseDate(row.leaseStartDate),
             endDate: parseDate(row.leaseEndDate),
             active: leaseStatus !== LeaseStatus.ENDED,
@@ -331,6 +348,7 @@ async function main() {
               dueDate: dueDateForPeriod(period),
               leaseId: lease.id,
               tenantId: tenant.id,
+              userId: tenant.userId,
             },
             create: {
               code,
@@ -340,6 +358,7 @@ async function main() {
               status: InvoiceStatus.PENDING,
               leaseId: lease.id,
               tenantId: tenant.id,
+              userId: tenant.userId,
             },
           });
         }
