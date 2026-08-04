@@ -1,0 +1,5 @@
+PROYECTO CORREGIDO - CARGA DE IMÁGENES Y ARCHIVOS
+
+Consulte: docs/CORRECCION_CARGA_ARCHIVOS.md
+
+IMPORTANTE: reconstruya las imágenes Docker. Las compilaciones antiguas .next y dist no se incluyeron para impedir que se despliegue código obsoleto.

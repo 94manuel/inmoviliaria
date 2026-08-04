@@ -10,6 +10,7 @@ import { PropertiesService } from './properties.service.js';
 
 const maxImageSize = Number(process.env.PROPERTY_IMAGE_MAX_FILE_SIZE ?? 5_000_000);
 const maxTour360Size = Number(process.env.PROPERTY_360_MAX_FILE_SIZE ?? 15_000_000);
+const maxRequestSize = Number(process.env.STORAGE_MAX_REQUEST_SIZE ?? 70_000_000);
 const storage = memoryStorage();
 
 type PropertyUploadFields = {
@@ -38,6 +39,7 @@ export class AdminPropertiesController {
     const tour360 = files.tour360?.[0];
     this.validateImages(photos);
     this.validateTour360(tour360);
+    this.validateTotalSize(photos, tour360);
     return this.properties.create(dto, user.sub, photos, tour360);
   }
 
@@ -57,6 +59,13 @@ export class AdminPropertiesController {
     if (required && files.length === 0) throw new BadRequestException('Debe subir al menos una imagen.');
     const invalid = files.find((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype) || file.size > maxImageSize);
     if (invalid) throw new BadRequestException('Las imágenes deben ser JPG, PNG o WEBP y pesar máximo 5 MB.');
+  }
+
+  private validateTotalSize(files: Express.Multer.File[], tour360?: Express.Multer.File): void {
+    const totalSize = files.reduce((sum, file) => sum + file.size, tour360?.size ?? 0);
+    if (totalSize > maxRequestSize) {
+      throw new BadRequestException('La carga completa no puede superar 70 MB.');
+    }
   }
 
   private validateTour360(file?: Express.Multer.File): void {

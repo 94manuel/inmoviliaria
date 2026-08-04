@@ -20,7 +20,7 @@ export function AdminPropertyForm() {
         <label>Habitaciones<input name="bedrooms" type="number" min="0" required /></label><label>Baños<input name="bathrooms" type="number" min="0" required /></label><label>Área m²<input name="areaM2" type="number" min="1" required /></label><label>Parqueaderos<input name="parking" type="number" min="0" defaultValue="0" required /></label>
       </div>
       <label>Características <span className="hint">separadas por coma</span><input name="features" placeholder="Balcón, vigilancia, pet friendly" /></label>
-      <label>Fotografías <span className="hint">JPG, PNG o WEBP; máximo 10 archivos de 5 MB</span><input type="file" accept="image/jpeg,image/png,image/webp" name="photos" multiple /></label>
+      <label>Fotografías <span className="hint">JPG, PNG o WEBP; máximo 10 archivos de 5 MB (70 MB en total junto con la foto 360)</span><input type="file" accept="image/jpeg,image/png,image/webp" name="photos" multiple /></label>
       <div className="twoCols">
         <label>Foto 360 <span className="hint">Panorámica equirectangular JPG, PNG o WEBP; máximo 15 MB</span><input name="tour360" type="file" accept="image/jpeg,image/png,image/webp" /></label>
         <label>Video <span className="hint">URL de YouTube, Vimeo o archivo MP4/WebM</span><input name="videoUrl" type="url" placeholder="https://..." /></label>

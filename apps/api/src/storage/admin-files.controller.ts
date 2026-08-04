@@ -9,6 +9,7 @@ import { FilesService } from './files.service.js';
 
 const maxFileCount = Number(process.env.STORAGE_MAX_FILE_COUNT ?? 20);
 const maxFileSize = Number(process.env.STORAGE_MAX_FILE_SIZE ?? 25_000_000);
+const maxRequestSize = Number(process.env.STORAGE_MAX_REQUEST_SIZE ?? 70_000_000);
 
 @Controller('admin/files')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,6 +30,10 @@ export class AdminFilesController {
     @CurrentUser() user: JwtUser,
   ) {
     if (files.length === 0) throw new BadRequestException('Debe seleccionar al menos un archivo.');
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+    if (totalSize > maxRequestSize) {
+      throw new BadRequestException('La carga completa no puede superar 70 MB.');
+    }
     return this.files.uploadGeneric(files, user.sub, folder);
   }
 }
