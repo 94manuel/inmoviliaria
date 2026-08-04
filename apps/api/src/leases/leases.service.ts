@@ -8,7 +8,11 @@ export class LeasesService {
   listAdmin() {
     return this.prisma.lease.findMany({
       where: { active: true },
-      include: { user: { select: { id: true, name: true, email: true } }, property: { select: { title: true, monthlyRent: true } } },
+      include: {
+        user: { select: { id: true, name: true, email: true } },
+        tenant: { select: { id: true, name: true, email: true } },
+        property: { select: { title: true, monthlyRent: true } },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

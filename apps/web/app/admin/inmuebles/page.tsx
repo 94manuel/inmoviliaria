@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import { AdminNav } from '@/components/AdminNav';
 import { AdminPropertyForm } from '@/components/AdminPropertyForm';
-import { archivePropertyAction } from '@/app/actions';
+import { AdminDeletePropertyButton } from '@/components/AdminDeletePropertyButton';
 import { apiFetch } from '@/lib/api';
 import { assetUrl, pesos } from '@/lib/format';
 import { requireUser } from '@/lib/auth';
@@ -20,7 +20,7 @@ export default async function AdminPropertiesPage() {
       <AdminPropertyForm />
       <div className="card tableCard"><div className="tableTitle"><h2>Publicaciones</h2><span>{properties.length} registros</span></div>
         <div className="responsiveTable"><table><thead><tr><th>Inmueble</th><th>Ubicación</th><th>Canon</th><th>Estado</th><th /></tr></thead><tbody>{properties.map((property) => <tr key={property.id}>
-          <td className="propertyRow"><div className="thumb"><Image src={assetUrl(property.images[0]?.url)} alt={property.title} fill sizes="54px" /></div>{property.title}</td><td>{property.neighborhood}, {property.city}</td><td>{pesos(property.monthlyRent)}</td><td><span className={`status ${property.status.toLowerCase()}`}>{property.status}</span></td><td>{property.status !== 'ARCHIVED' && <form action={archivePropertyAction}><input type="hidden" name="id" value={property.id}/><button className="textButton">Archivar</button></form>}</td>
+          <td className="propertyRow"><div className="thumb"><Image src={assetUrl(property.images[0]?.url)} alt={property.title} fill sizes="54px" /></div>{property.title}</td><td>{property.neighborhood}, {property.city}</td><td>{pesos(property.monthlyRent)}</td><td><span className={`status ${property.status.toLowerCase()}`}>{property.status}</span></td><td><AdminDeletePropertyButton id={property.id} title={property.title} /></td>
         </tr>)}</tbody></table></div>
       </div>
     </div></div></section>

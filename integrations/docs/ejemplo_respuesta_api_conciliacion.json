@@ -1,0 +1,13 @@
+{
+  "coincide": true,
+  "motivo": "Coincidencia por cuenta, pagador y valor",
+  "arrendatario": {
+    "id": "ARR-104",
+    "nombre": "Carlos Pérez",
+    "email": "carlos@example.com",
+    "contratoId": "CONT-2026-18",
+    "contrato": "2026-18",
+    "inmueble": "Apartamento 301 - Calle de ejemplo",
+    "valorEsperado": 1500000
+  }
+}

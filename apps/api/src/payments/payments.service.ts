@@ -36,7 +36,7 @@ export class PaymentsService {
       checkoutUrl = this.buildCybervestigioCheckout(reference, invoice.amount, invoice.code);
     }
     const payment = await this.prisma.payment.create({
-      data: { reference, amount: invoice.amount, invoiceId, userId, provider, status: 'PENDING', checkoutUrl },
+      data: { reference, amount: invoice.amount, invoiceId, userId, tenantId: invoice.tenantId, provider, status: 'PENDING', checkoutUrl },
     });
     return { payment, provider, checkoutUrl };
   }

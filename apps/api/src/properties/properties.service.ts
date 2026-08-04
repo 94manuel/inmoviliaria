@@ -123,12 +123,57 @@ export class PropertiesService {
     return this.prisma.property.findUnique({ where: { id: propertyId }, include: { images: true } });
   }
 
-  async archive(propertyId: string) {
-    await this.ensureExists(propertyId);
-    return this.prisma.property.update({
+  async remove(propertyId: string) {
+    const property = await this.prisma.property.findUnique({
       where: { id: propertyId },
-      data: { status: 'ARCHIVED', published: false },
+      include: {
+        images: { select: { url: true } },
+        leases: { select: { id: true } },
+      },
     });
+    if (!property) throw new NotFoundException('Inmueble no encontrado.');
+
+    const publicPaths = [
+      ...property.images.map((image) => image.url),
+      property.tour360Url,
+    ].filter((value): value is string => Boolean(value?.startsWith('/api/files/')));
+
+    const storedFiles = publicPaths.length > 0
+      ? await this.prisma.storedFile.findMany({
+          where: { publicPath: { in: publicPaths } },
+          select: { id: true, objectKey: true },
+        })
+      : [];
+
+    const leaseIds = property.leases.map((lease) => lease.id);
+    const invoices = leaseIds.length > 0
+      ? await this.prisma.invoice.findMany({
+          where: { leaseId: { in: leaseIds } },
+          select: { id: true },
+        })
+      : [];
+    const invoiceIds = invoices.map((invoice) => invoice.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Se eliminan primero las dependencias financieras para respetar las llaves foráneas.
+      // Las notificaciones bancarias se conservan como auditoría y sus relaciones pasan a null.
+      if (invoiceIds.length > 0) {
+        await tx.payment.deleteMany({ where: { invoiceId: { in: invoiceIds } } });
+        await tx.invoice.deleteMany({ where: { id: { in: invoiceIds } } });
+      }
+      if (leaseIds.length > 0) {
+        await tx.lease.deleteMany({ where: { id: { in: leaseIds } } });
+      }
+      await tx.property.delete({ where: { id: propertyId } });
+    });
+
+    await this.files.removeStoredFiles(storedFiles);
+    return {
+      deleted: true,
+      id: propertyId,
+      deletedLeases: leaseIds.length,
+      deletedInvoices: invoiceIds.length,
+    };
   }
 
   private async ensureExists(id: string): Promise<void> {

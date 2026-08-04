@@ -1,0 +1,50 @@
+BUIJO - INSTALACIÓN DEL WORKFLOW DE PAGOS
+
+ARCHIVO PRINCIPAL
+BUIJO_conciliacion_pagos_bancolombia_outlook.json
+
+PASOS OBLIGATORIOS DESPUÉS DE IMPORTAR
+
+1. OUTLOOK
+   Cree o seleccione una credencial Microsoft Outlook OAuth2.
+   Permisos mínimos recomendados: Mail.ReadWrite y Mail.Send.
+   Seleccione la misma credencial en:
+   - Outlook: nuevo correo
+   - Alertar extracción incompleta
+   - Alertar pago sin coincidencia
+   - Alertar error de registro
+   - Outlook: confirmar al arrendatario
+   - Marcar correo como leído
+
+2. BLOQUE DE CONFIGURACIÓN
+   Abra el nodo “Extraer y validar notificación”.
+   Modifique únicamente el objeto CONFIG del comienzo:
+   - apiBaseUrl
+   - correoInterno
+   - remitentesExactosPermitidos
+   - cuentasReceptorasUltimos4
+   - toleranciaValorCOP
+
+3. API DE LA PÁGINA
+   Implemente los dos endpoints descritos en CONTRATO_API_PAGOS.md.
+   En n8n cree una credencial Header Auth:
+   - Header: X-API-Key
+   - Value: la clave secreta de la página.
+   Selecciónela en ambos nodos HTTP.
+
+4. PRUEBAS
+   Use copias de correos reales, valores pequeños o ambiente de pruebas.
+   Verifique primero:
+   - correo sin coincidencia;
+   - pago con valor diferente;
+   - correo repetido;
+   - pago correcto;
+   - arrendatario sin email.
+
+5. PUBLICACIÓN
+   Active el workflow únicamente después de probar todas las ramas.
+
+IMPORTANTE
+El archivo contiene toda la lógica, pero no puede incluir sus credenciales,
+la URL real de su página, los números de sus cuentas ni el formato exacto
+del correo bancario. Esos datos deben configurarse localmente.

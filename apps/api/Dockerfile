@@ -24,5 +24,7 @@ COPY --from=builder /app/apps/api/prisma.config.ts apps/api/prisma.config.ts
 COPY --from=builder /app/apps/api/uploads apps/api/uploads
 COPY --from=builder /app/apps/api/uploads/seed seed-assets
 COPY --from=builder /app/apps/api/src/generated apps/api/src/generated
+COPY --from=builder /app/apps/api/scripts apps/api/scripts
+COPY --from=builder /app/integrations integrations
 EXPOSE 4000
 CMD ["node", "apps/api/dist/main.js"]

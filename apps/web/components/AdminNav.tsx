@@ -9,6 +9,7 @@ export function AdminNav() {
       <Link href="/admin/noticias">Noticias</Link>
       <Link href="/admin/archivos">Archivos</Link>
       <Link href="/admin/facturas">Facturas</Link>
+      <Link href="/admin/conciliacion">Conciliación</Link>
       <Link href="/admin/contactos">Contactos</Link>
       <Link href="/inmuebles">Ver sitio público</Link>
     </aside>

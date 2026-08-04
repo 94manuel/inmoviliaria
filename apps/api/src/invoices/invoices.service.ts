@@ -55,6 +55,7 @@ export class InvoicesService {
     return this.prisma.invoice.findMany({
       include: {
         user: { select: { name: true, email: true } },
+        tenant: { select: { name: true, email: true } },
         lease: { include: { property: { select: { title: true } } } },
         lineItems: {
           include: { catalogItem: { select: { code: true, name: true, type: true } } },
@@ -84,6 +85,7 @@ export class InvoicesService {
         code: `FAC-${new Date().getFullYear()}-${randomUUID().slice(0, 8).toUpperCase()}`,
         leaseId: lease.id,
         userId: lease.userId,
+        tenantId: lease.tenantId,
         period: new Date(dto.period),
         dueDate: new Date(dto.dueDate),
         amount,

@@ -33,7 +33,7 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.users.findByEmail(dto.email.toLowerCase().trim());
-    if (!user || !(await bcrypt.compare(dto.password, user.passwordHash))) {
+    if (!user?.passwordHash || !(await bcrypt.compare(dto.password, user.passwordHash))) {
       throw new UnauthorizedException('Correo o contraseña inválidos.');
     }
     return this.issueToken(user);

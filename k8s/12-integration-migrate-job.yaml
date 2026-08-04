@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: asesoria-db-migrate
+  namespace: asesoria-inmobiliaria
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: asesoria-db-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: asesoria-inmobiliaria-api:local
+          imagePullPolicy: Never
+          command:
+            - /bin/sh
+            - -ec
+            - npm run db:migrate -w @inmobiliaria/api
+          envFrom:
+            - configMapRef:
+                name: asesoria-config
+            - secretRef:
+                name: asesoria-secrets

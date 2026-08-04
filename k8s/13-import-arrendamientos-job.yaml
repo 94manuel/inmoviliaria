@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: asesoria-import-arrendamientos
+  namespace: asesoria-inmobiliaria
+spec:
+  backoffLimit: 1
+  ttlSecondsAfterFinished: 1800
+  template:
+    metadata:
+      labels:
+        app: asesoria-import-arrendamientos
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: import
+          image: asesoria-inmobiliaria-api:local
+          imagePullPolicy: Never
+          command:
+            - /bin/sh
+            - -ec
+            - npm run import:arrendamientos -w @inmobiliaria/api
+          envFrom:
+            - configMapRef:
+                name: asesoria-config
+            - secretRef:
+                name: asesoria-secrets

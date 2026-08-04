@@ -73,10 +73,16 @@ export async function createPropertyAction(_previous: ActionState, formData: For
   }
 }
 
-export async function archivePropertyAction(formData: FormData): Promise<void> {
-  await apiFetch(`/admin/properties/${String(formData.get('id'))}`, { method: 'DELETE' }, true);
-  revalidatePath('/admin/inmuebles');
-  revalidatePath('/inmuebles');
+export async function deletePropertyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    await apiFetch(`/admin/properties/${String(formData.get('id'))}`, { method: 'DELETE' }, true);
+    revalidatePath('/admin/inmuebles');
+    revalidatePath('/inmuebles');
+    revalidatePath('/');
+    return { success: 'El inmueble, sus archivos y sus registros asociados fueron eliminados definitivamente.' };
+  } catch (error) {
+    return { error: messageOf(error) };
+  }
 }
 
 export async function createNewsAction(_previous: ActionState, formData: FormData): Promise<ActionState> {

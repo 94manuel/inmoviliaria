@@ -66,7 +66,8 @@ export interface Invoice {
   amount: number;
   status: InvoiceStatus;
   paidAt?: string | null;
-  user?: { name: string; email: string };
+  user?: { name: string; email: string } | null;
+  tenant?: { name: string; email?: string | null } | null;
   lease: { id?: string; property: { title: string; address?: string }; user?: { name: string } };
   lineItems?: Array<{
     id: string;
@@ -80,7 +81,8 @@ export interface Invoice {
 
 export interface Lease {
   id: string;
-  user: { id: string; name: string; email: string };
+  user?: { id: string; name: string; email: string } | null;
+  tenant?: { id: string; name: string; email?: string | null } | null;
   property: { title: string; monthlyRent: number };
 }
 
@@ -105,4 +107,43 @@ export interface StoredFile {
   downloadPath?: string;
   createdAt: string;
   createdBy?: { id: string; name: string; email: string } | null;
+}
+
+
+export interface BankPaymentNotification {
+  id: string;
+  outlookMessageId: string;
+  sender: string;
+  subject: string;
+  payerName?: string | null;
+  amount?: number | null;
+  accountLast4?: string | null;
+  bankReference?: string | null;
+  receivedAt: string;
+  status: 'RECEIVED' | 'MATCHED' | 'REVIEW_REQUIRED' | 'REJECTED' | 'DUPLICATE' | 'ERROR';
+  reviewReason?: string | null;
+  payment?: { id: string; reference: string; status: string } | null;
+  matchedInvoice?: { id: string; code: string; amount: number } | null;
+  matchedLease?: { tenant?: { name: string; email?: string | null } | null; property: { address: string } } | null;
+}
+
+export interface ReceivingBankAccount {
+  id: string;
+  bank: string;
+  label: string;
+  accountLast4: string;
+  active: boolean;
+  _count: { leaseLinks: number; notifications: number };
+}
+
+export interface ImportBatch {
+  id: string;
+  sourceFile: string;
+  status: 'PROCESSING' | 'COMPLETED' | 'COMPLETED_WITH_REVIEW' | 'FAILED';
+  totalRows: number;
+  importedRows: number;
+  reviewRows: number;
+  startedAt: string;
+  finishedAt?: string | null;
+  _count: { records: number };
 }

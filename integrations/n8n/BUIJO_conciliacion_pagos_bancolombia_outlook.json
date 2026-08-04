@@ -1,0 +1,680 @@
+{
+  "name": "BUIJO - Conciliación pagos Bancolombia Outlook y arrendatarios",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## BUIJO — Conciliación automática de pagos\n\n1. Conecta la misma credencial **Microsoft Outlook OAuth2** al Trigger y a los nodos de envío/actualización.\n2. En **Extraer y validar notificación**, reemplaza: dominio de la API, correo interno, remitente exacto verificado y últimos 4 dígitos de las cuentas receptoras.\n3. En los dos nodos HTTP selecciona una credencial **Header Auth** con nombre `X-API-Key` y el valor entregado por tu página web.\n4. Implementa los endpoints definidos en `CONTRATO_API_PAGOS.md`.\n5. Prueba con una copia de un correo real antes de publicar.\n\n**Seguridad:** el workflow no confirma pagos si el remitente, la cuenta, el valor o el arrendatario no pueden validarse.",
+        "height": 520,
+        "width": 560,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        -560
+      ],
+      "id": "1ce9743f-bb76-472e-867f-ae4cdf09c362",
+      "name": "Configuración obligatoria"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "authentication": "microsoftOutlookOAuth2Api",
+        "event": "messageReceived",
+        "output": "raw",
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlookTrigger",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        40
+      ],
+      "id": "4e2a4e94-a8fd-482c-9b24-6e1e2fe7f3ce",
+      "name": "Outlook: nuevo correo"
+    },
+    {
+      "parameters": {
+        "jsCode": "const CONFIG = {\n  // 1) Dirección base de la API de la página web, sin / al final.\n  apiBaseUrl: 'https://asesoriainmobiliariajb.com',\n  endpointConciliar: '/api/n8n/arrendamientos/conciliar-pago',\n  endpointRegistrar: '/api/n8n/arrendamientos/registrar-pago',\n\n  // 2) Correo interno que recibe casos no conciliados o con errores.\n  correoInterno: 'pagos@REEMPLAZAR-DOMINIO.com',\n\n  // 3) Copie aquí la dirección EXACTA del remitente de una notificación\n  // auténtica de Bancolombia previamente verificada.\n  remitentesExactosPermitidos: [\n    'REEMPLAZAR-CON-REMITENTE-REAL@bancolombia.com.co',\n  ],\n  dominiosPermitidos: ['bancolombia.com.co'],\n  requiereRemitenteExacto: true,\n\n  // 4) Últimos 4 dígitos de las cuentas que reciben los cánones.\n  cuentasReceptorasUltimos4: ['0000'],\n\n  // Diferencia máxima aceptable frente al valor esperado del contrato.\n  toleranciaValorCOP: 0,\n  moneda: 'COP',\n};\n\nconst raw = $input.first().json ?? {};\n\nconst pick = (...values) => {\n  for (const value of values) {\n    if (value !== undefined && value !== null && String(value).trim() !== '') {\n      return value;\n    }\n  }\n  return '';\n};\n\nconst normalize = (value) =>\n  String(value ?? '')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/\\s+/g, ' ')\n    .trim();\n\nconst decodeEntities = (value) =>\n  String(value ?? '')\n    .replace(/&nbsp;/gi, ' ')\n    .replace(/&amp;/gi, '&')\n    .replace(/&quot;/gi, '\"')\n    .replace(/&#39;|&apos;/gi, \"'\")\n    .replace(/&lt;/gi, '<')\n    .replace(/&gt;/gi, '>');\n\nconst htmlToText = (value) =>\n  decodeEntities(value)\n    .replace(/<(br|\\/p|\\/div|\\/tr|\\/li|\\/h[1-6])\\b[^>]*>/gi, '\\n')\n    .replace(/<style[\\s\\S]*?<\\/style>/gi, ' ')\n    .replace(/<script[\\s\\S]*?<\\/script>/gi, ' ')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/\\r/g, '')\n    .replace(/[ \\t]+/g, ' ')\n    .replace(/\\n[ \\t]+/g, '\\n')\n    .replace(/\\n{3,}/g, '\\n\\n')\n    .trim();\n\nconst bodyRaw = pick(\n  raw.body?.content,\n  raw.bodyContent,\n  raw.html,\n  raw.text,\n  raw.bodyPreview,\n  raw.snippet,\n);\n\nconst texto = htmlToText(bodyRaw);\nconst asunto = String(pick(raw.subject, raw.asunto)).trim();\nconst remitente = normalize(\n  pick(\n    raw.from?.emailAddress?.address,\n    raw.sender?.emailAddress?.address,\n    raw.from?.address,\n    raw.sender?.address,\n    raw.from,\n    raw.sender,\n  ),\n);\n\nconst remitenteNombre = String(\n  pick(\n    raw.from?.emailAddress?.name,\n    raw.sender?.emailAddress?.name,\n    raw.from?.name,\n    raw.sender?.name,\n  ),\n).trim();\n\nconst correoId = String(\n  pick(raw.id, raw.messageId, raw.internetMessageId, raw.internet_message_id),\n).trim();\n\nconst recibidoEn = String(\n  pick(raw.receivedDateTime, raw.date, raw.createdDateTime, new Date().toISOString()),\n).trim();\n\nconst remitentesConfigurados = CONFIG.remitentesExactosPermitidos\n  .map(normalize)\n  .filter((value) => value && !value.startsWith('reemplazar-'));\n\nconst cuentasConfiguradas = CONFIG.cuentasReceptorasUltimos4\n  .map((value) => String(value).replace(/\\D/g, '').slice(-4))\n  .filter((value) => value.length === 4 && value !== '0000');\n\nconst dominio = remitente.includes('@') ? remitente.split('@').pop() : '';\nconst coincideDominio = CONFIG.dominiosPermitidos.some(\n  (permitido) =>\n    dominio === normalize(permitido) ||\n    dominio.endsWith(`.${normalize(permitido)}`),\n);\nconst coincideRemitenteExacto = remitentesConfigurados.includes(remitente);\n\nconst remitentePermitido = CONFIG.requiereRemitenteExacto\n  ? coincideRemitenteExacto && coincideDominio\n  : coincideRemitenteExacto || coincideDominio;\n\nconst textoCompleto = `${asunto}\\n${texto}`;\nconst textoNormalizado = normalize(textoCompleto);\n\nconst contieneMarca = textoNormalizado.includes('bancolombia');\nconst contieneOperacion = [\n  'pago',\n  'transferencia',\n  'abono',\n  'consignacion',\n  'deposito',\n  'recibiste',\n  'transaccion',\n].some((word) => textoNormalizado.includes(word));\n\nconst parseMoney = (candidate) => {\n  let value = String(candidate ?? '')\n    .replace(/\\s/g, '')\n    .replace(/[^\\d.,-]/g, '');\n\n  if (!value || !/\\d/.test(value)) return null;\n\n  const lastDot = value.lastIndexOf('.');\n  const lastComma = value.lastIndexOf(',');\n\n  if (lastDot >= 0 && lastComma >= 0) {\n    const decimalSeparator = lastDot > lastComma ? '.' : ',';\n    const thousandsSeparator = decimalSeparator === '.' ? ',' : '.';\n    value = value.split(thousandsSeparator).join('');\n    value = value.replace(decimalSeparator, '.');\n  } else if (lastComma >= 0) {\n    const decimals = value.length - lastComma - 1;\n    value =\n      decimals === 1 || decimals === 2\n        ? value.replace(/\\./g, '').replace(',', '.')\n        : value.replace(/,/g, '');\n  } else if (lastDot >= 0) {\n    const dotCount = (value.match(/\\./g) || []).length;\n    const decimals = value.length - lastDot - 1;\n    value =\n      dotCount > 1 || decimals === 3\n        ? value.replace(/\\./g, '')\n        : value;\n  }\n\n  const amount = Number(value);\n  return Number.isFinite(amount) && amount > 0 ? amount : null;\n};\n\nconst amountPatterns = [\n  /(?:valor|monto|abono|pago|transferencia|consignaci[oó]n|recibiste)\\s*(?:de|por|:|-)?\\s*(?:cop|col\\$|\\$)?\\s*([\\d][\\d.,\\s]{2,24})/gi,\n  /(?:cop|col\\$|\\$)\\s*([\\d][\\d.,\\s]{2,24})/gi,\n];\n\nlet valor = null;\nfor (const pattern of amountPatterns) {\n  for (const match of textoCompleto.matchAll(pattern)) {\n    const parsed = parseMoney(match[1]);\n    if (parsed && parsed < 1_000_000_000_000) {\n      valor = parsed;\n      break;\n    }\n  }\n  if (valor) break;\n}\n\nconst accountPatterns = [\n  /(?:cuenta|producto)\\s*(?:destino|receptora|beneficiaria|abonada|a la que llega|n[uú]mero|no\\.?)?\\s*(?:es|:|-)?\\s*([xX*#\\d][xX*#\\d\\s-]{3,30})/gi,\n  /(?:terminada|finalizada|finaliza|termina)\\s+en\\s+(\\d{4})/gi,\n];\n\nconst cuentasDetectadas = [];\nfor (const pattern of accountPatterns) {\n  for (const match of textoCompleto.matchAll(pattern)) {\n    const digits = String(match[1]).replace(/\\D/g, '');\n    if (digits.length >= 4) {\n      const account = {\n        valorDetectado: String(match[1]).trim(),\n        digitos: digits,\n        ultimos4: digits.slice(-4),\n      };\n      if (\n        !cuentasDetectadas.some(\n          (existing) =>\n            existing.digitos === account.digitos &&\n            existing.ultimos4 === account.ultimos4,\n        )\n      ) {\n        cuentasDetectadas.push(account);\n      }\n    }\n  }\n}\n\nconst cuentaAutorizada = cuentasDetectadas.find((account) =>\n  cuentasConfiguradas.includes(account.ultimos4),\n);\n\nconst lines = texto\n  .split(/\\n+/)\n  .map((line) => line.trim())\n  .filter(Boolean);\n\nconst cleanExtractedText = (value) =>\n  String(value ?? '')\n    .replace(/^[\\s:–—-]+/, '')\n    .replace(/\\s{2,}/g, ' ')\n    .replace(/[|]+.*$/, '')\n    .trim();\n\nconst extractLineValue = (labels, maxLength = 120) => {\n  for (const line of lines) {\n    const normalizedLine = normalize(line);\n    for (const label of labels) {\n      const normalizedLabel = normalize(label);\n      const index = normalizedLine.indexOf(normalizedLabel);\n      if (index >= 0) {\n        let value = line.slice(index + label.length);\n        value = cleanExtractedText(value);\n        if (value && value.length <= maxLength) return value;\n      }\n    }\n  }\n  return '';\n};\n\nlet pagador = extractLineValue([\n  'nombre del pagador',\n  'nombre de quien paga',\n  'pagador',\n  'ordenante',\n  'enviado por',\n  'transferido por',\n  'de:',\n]);\n\nif (!pagador) {\n  const match = textoCompleto.match(\n    /(?:pagador|ordenante|enviado por|transferido por)\\s*(?:es|:|-)?\\s*([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ .'-]{3,100})/i,\n  );\n  pagador = cleanExtractedText(match?.[1] ?? '');\n}\n\nlet referencia = extractLineValue([\n  'número de transacción',\n  'numero de transaccion',\n  'referencia bancaria',\n  'referencia',\n  'comprobante',\n  'código de operación',\n  'codigo de operacion',\n  'id de transacción',\n  'id de transaccion',\n], 80);\n\nif (!referencia) {\n  const match = textoCompleto.match(\n    /(?:referencia|comprobante|transacci[oó]n|operaci[oó]n)\\s*(?:n[uú]mero|no\\.?|id|:|-)?\\s*([A-Z0-9-]{5,50})/i,\n  );\n  referencia = cleanExtractedText(match?.[1] ?? '');\n}\n\nlet fechaPago = extractLineValue([\n  'fecha y hora',\n  'fecha del pago',\n  'fecha de la transacción',\n  'fecha de la transaccion',\n  'fecha:',\n], 60);\n\nconst advertencias = [];\n\nif (!remitentesConfigurados.length) {\n  advertencias.push(\n    'No se ha configurado un remitente exacto autorizado de Bancolombia.',\n  );\n}\nif (!cuentasConfiguradas.length) {\n  advertencias.push(\n    'No se han configurado los últimos 4 dígitos de las cuentas receptoras.',\n  );\n}\nif (!valor) advertencias.push('No fue posible extraer el valor del pago.');\nif (!pagador) advertencias.push('No fue posible extraer el nombre del pagador.');\nif (!cuentaAutorizada) {\n  advertencias.push(\n    'No se detectó una cuenta receptora incluida en la lista autorizada.',\n  );\n}\nif (!referencia) {\n  advertencias.push(\n    'No se detectó referencia bancaria; se usará el ID del correo para evitar duplicados.',\n  );\n}\n\nconst esBancolombia =\n  remitentePermitido && contieneMarca && contieneOperacion;\n\nconst datosMinimos =\n  Boolean(valor) &&\n  Boolean(pagador) &&\n  Boolean(cuentaAutorizada) &&\n  Boolean(correoId);\n\nconst referenciaIdempotencia = referencia || correoId;\n\nreturn [\n  {\n    json: {\n      config: CONFIG,\n      correo: {\n        id: correoId,\n        asunto,\n        remitente,\n        remitenteNombre,\n        recibidoEn,\n        bodyPreview: texto.slice(0, 2000),\n      },\n      pago: {\n        banco: 'Bancolombia',\n        moneda: CONFIG.moneda,\n        valor,\n        pagador,\n        cuentaDestino: cuentaAutorizada?.valorDetectado || '',\n        ultimos4Cuenta: cuentaAutorizada?.ultimos4 || '',\n        cuentasDetectadas,\n        referencia,\n        referenciaIdempotencia,\n        fechaPago: fechaPago || recibidoEn,\n      },\n      validacion: {\n        esBancolombia,\n        datosMinimos,\n        remitentePermitido,\n        coincideRemitenteExacto,\n        coincideDominio,\n        contieneMarca,\n        contieneOperacion,\n        advertencias,\n      },\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -700,
+        40
+      ],
+      "id": "fafe6e29-7d18-486a-b099-026c688e1688",
+      "name": "Extraer y validar notificación"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "780a155a-1bea-48e3-832a-ceb59d30de67",
+              "leftValue": "={{ $json.validacion.esBancolombia }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -440,
+        40
+      ],
+      "id": "7e797894-889a-47d3-8108-865c00f0decb",
+      "name": "¿Remitente bancario válido?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -180,
+        220
+      ],
+      "id": "9cc282ae-ca14-4c1d-858f-46d111213522",
+      "name": "Descartar correo no bancario"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7e91ba45-95e0-48d3-aebe-7b338bb8fe32",
+              "leftValue": "={{ $json.validacion.datosMinimos }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        -40
+      ],
+      "id": "6eef5fb3-b7ef-48d6-83a3-8fc8be46ef97",
+      "name": "¿Datos mínimos completos?"
+    },
+    {
+      "parameters": {
+        "authentication": "microsoftOutlookOAuth2Api",
+        "resource": "message",
+        "operation": "send",
+        "toRecipients": "={{ $json.config.correoInterno }}",
+        "subject": "=ALERTA: notificación bancaria sin datos suficientes",
+        "bodyContent": "={{ 'No fue posible conciliar automáticamente una notificación bancaria.\\n\\n' + 'Remitente: ' + $json.correo.remitente + '\\n' + 'Asunto: ' + $json.correo.asunto + '\\n' + 'ID del correo: ' + $json.correo.id + '\\n' + 'Valor detectado: ' + String($json.pago.valor ?? '') + '\\n' + 'Pagador detectado: ' + String($json.pago.pagador ?? '') + '\\n' + 'Cuentas detectadas: ' + JSON.stringify($json.pago.cuentasDetectadas) + '\\n' + 'Advertencias: ' + $json.validacion.advertencias.join(' | ') }}",
+        "additionalFields": {
+          "bodyContentType": "Text",
+          "importance": "High",
+          "saveToSentItems": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        80,
+        120
+      ],
+      "id": "3be90636-0c63-40cf-9b7c-4f75af8f5ab6",
+      "name": "Alertar extracción incompleta"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.config.apiBaseUrl + $json.config.endpointConciliar }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ cuentaDestino: $json.pago.cuentaDestino, ultimos4Cuenta: $json.pago.ultimos4Cuenta, pagador: $json.pago.pagador, valor: $json.pago.valor, moneda: $json.pago.moneda, referenciaBancaria: $json.pago.referencia, referenciaIdempotencia: $json.pago.referenciaIdempotencia, fechaPago: $json.pago.fechaPago, idCorreoOutlook: $json.correo.id, asuntoCorreo: $json.correo.asunto }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        80,
+        -120
+      ],
+      "id": "9b129d5f-6203-4797-bd36-0b12eab8be2f",
+      "name": "API: buscar arrendatario"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Extraer y validar notificación').item.json;\nconst http = $json ?? {};\n\nconst statusCode = Number(http.statusCode ?? 200);\nconst body = http.body ?? http;\n\nconst responseData =\n  body?.data && typeof body.data === 'object' ? body.data : body;\n\nconst arrendatario =\n  responseData?.arrendatario ??\n  responseData?.tenant ??\n  responseData?.cliente ??\n  {};\n\nconst apiCoincide = Boolean(\n  responseData?.coincide ??\n    responseData?.match ??\n    responseData?.matched ??\n    false,\n);\n\nconst email = String(\n  arrendatario.email ??\n    arrendatario.correo ??\n    arrendatario.emailArrendatario ??\n    '',\n).trim();\n\nconst valorEsperadoRaw =\n  arrendatario.valorEsperado ??\n  arrendatario.canon ??\n  arrendatario.valorCanon ??\n  responseData.valorEsperado ??\n  null;\n\nconst valorEsperado =\n  valorEsperadoRaw === null || valorEsperadoRaw === undefined\n    ? null\n    : Number(valorEsperadoRaw);\n\nconst diferenciaValor =\n  valorEsperado !== null && Number.isFinite(valorEsperado)\n    ? Math.abs(Number(source.pago.valor) - valorEsperado)\n    : null;\n\nconst valorAceptable =\n  diferenciaValor === null ||\n  diferenciaValor <= Number(source.config.toleranciaValorCOP ?? 0);\n\nconst respuestaHTTPValida = statusCode >= 200 && statusCode < 300;\n\nconst coincide =\n  respuestaHTTPValida &&\n  apiCoincide &&\n  Boolean(email) &&\n  valorAceptable;\n\nconst motivos = [];\n\nif (!respuestaHTTPValida) {\n  motivos.push(`La API respondió con estado HTTP ${statusCode}.`);\n}\nif (!apiCoincide) {\n  motivos.push(\n    String(\n      responseData?.motivo ??\n        responseData?.reason ??\n        'La base de datos no encontró una coincidencia.',\n    ),\n  );\n}\nif (!email) {\n  motivos.push('El registro coincidente no tiene correo electrónico.');\n}\nif (!valorAceptable) {\n  motivos.push(\n    `La diferencia entre el pago y el valor esperado es de ${diferenciaValor} COP.`,\n  );\n}\n\nreturn [\n  {\n    json: {\n      ...source,\n      conciliacion: {\n        coincide,\n        motivos,\n        statusCode,\n        valorEsperado,\n        diferenciaValor,\n        arrendatario: {\n          id:\n            arrendatario.id ??\n            arrendatario.arrendatarioId ??\n            arrendatario.clienteId ??\n            '',\n          nombre:\n            arrendatario.nombre ??\n            arrendatario.nombreCompleto ??\n            arrendatario.razonSocial ??\n            '',\n          email,\n          contratoId:\n            arrendatario.contratoId ??\n            arrendatario.idContrato ??\n            '',\n          contrato:\n            arrendatario.contrato ??\n            arrendatario.numeroContrato ??\n            '',\n          inmueble:\n            arrendatario.inmueble ??\n            arrendatario.direccionInmueble ??\n            arrendatario.predio ??\n            '',\n          valorEsperado,\n        },\n        respuestaApi: responseData,\n      },\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        -120
+      ],
+      "id": "541cb271-a86e-4335-9dcf-c4d70de24ec8",
+      "name": "Evaluar conciliación"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "89507634-08e8-41c9-96ef-656b8a0773c3",
+              "leftValue": "={{ $json.conciliacion.coincide }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        600,
+        -120
+      ],
+      "id": "580428fb-7580-4745-83b2-cf9dd62da92f",
+      "name": "¿Coincide con arrendatario?"
+    },
+    {
+      "parameters": {
+        "authentication": "microsoftOutlookOAuth2Api",
+        "resource": "message",
+        "operation": "send",
+        "toRecipients": "={{ $json.config.correoInterno }}",
+        "subject": "=ALERTA: pago sin coincidencia en arrendatarios",
+        "bodyContent": "={{ 'Se recibió una notificación de pago que no pudo asociarse automáticamente.\\n\\n' + 'Valor: ' + String($json.pago.valor) + ' COP\\n' + 'Pagador: ' + $json.pago.pagador + '\\n' + 'Cuenta: ****' + $json.pago.ultimos4Cuenta + '\\n' + 'Referencia: ' + $json.pago.referenciaIdempotencia + '\\n' + 'Correo de origen: ' + $json.correo.id + '\\n' + 'Motivos: ' + $json.conciliacion.motivos.join(' | ') }}",
+        "additionalFields": {
+          "bodyContentType": "Text",
+          "importance": "High",
+          "saveToSentItems": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        860,
+        60
+      ],
+      "id": "da0b6101-d23f-4ca7-a8f5-c59eac8ab2a8",
+      "name": "Alertar pago sin coincidencia"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.config.apiBaseUrl + $json.config.endpointRegistrar }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ arrendatarioId: $json.conciliacion.arrendatario.id, contratoId: $json.conciliacion.arrendatario.contratoId, valor: $json.pago.valor, moneda: $json.pago.moneda, pagador: $json.pago.pagador, banco: $json.pago.banco, ultimos4Cuenta: $json.pago.ultimos4Cuenta, referenciaBancaria: $json.pago.referencia, referenciaIdempotencia: $json.pago.referenciaIdempotencia, fechaPago: $json.pago.fechaPago, idCorreoOutlook: $json.correo.id, origen: 'OUTLOOK_BANCOLOMBIA_N8N' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json",
+              "fullResponse": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        860,
+        -200
+      ],
+      "id": "795cf3ce-d1ca-4098-8786-9cf162150e9a",
+      "name": "API: registrar pago"
+    },
+    {
+      "parameters": {
+        "jsCode": "const source = $('Evaluar conciliación').item.json;\nconst http = $json ?? {};\nconst statusCode = Number(http.statusCode ?? 200);\nconst body = http.body ?? http;\nconst data = body?.data && typeof body.data === 'object' ? body.data : body;\n\nconst duplicado = Boolean(\n  data?.duplicado ??\n    data?.duplicate ??\n    data?.alreadyExists ??\n    statusCode === 409,\n);\n\nconst registrado = Boolean(\n  data?.registrado ??\n    data?.created ??\n    data?.success ??\n    (statusCode >= 200 && statusCode < 300),\n);\n\nconst ok = registrado || duplicado;\n\nconst esc = (value) =>\n  String(value ?? '')\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#039;');\n\nconst amount = Number(source.pago.valor ?? 0).toLocaleString('es-CO', {\n  style: 'currency',\n  currency: 'COP',\n  maximumFractionDigits: 0,\n});\n\nconst arr = source.conciliacion.arrendatario;\nconst fecha = new Intl.DateTimeFormat('es-CO', {\n  timeZone: 'America/Bogota',\n  dateStyle: 'long',\n  timeStyle: 'short',\n}).format(new Date());\n\nconst html = `\n<!doctype html>\n<html lang=\"es\">\n  <body style=\"font-family:Arial,sans-serif;line-height:1.55;color:#222\">\n    <h2>Confirmación de pago recibido</h2>\n    <p>Hola, <strong>${esc(arr.nombre || 'arrendatario')}</strong>.</p>\n    <p>Hemos identificado y registrado el siguiente pago:</p>\n    <table cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse\">\n      <tr><td><strong>Valor</strong></td><td>${esc(amount)}</td></tr>\n      <tr><td><strong>Pagador</strong></td><td>${esc(source.pago.pagador)}</td></tr>\n      <tr><td><strong>Cuenta receptora</strong></td><td>Terminada en ${esc(source.pago.ultimos4Cuenta)}</td></tr>\n      <tr><td><strong>Referencia</strong></td><td>${esc(source.pago.referenciaIdempotencia)}</td></tr>\n      <tr><td><strong>Contrato</strong></td><td>${esc(arr.contrato || arr.contratoId)}</td></tr>\n      <tr><td><strong>Inmueble</strong></td><td>${esc(arr.inmueble)}</td></tr>\n      <tr><td><strong>Registro</strong></td><td>${esc(fecha)}</td></tr>\n    </table>\n    <p>Conserva el comprobante bancario. Esta confirmación corresponde a la conciliación automática de la notificación recibida y podrá ser revisada si el banco reporta una reversión o inconsistencia.</p>\n    <p>Cordialmente,<br><strong>BUIJO — Administración de arrendamientos</strong></p>\n  </body>\n</html>`;\n\nreturn [\n  {\n    json: {\n      ...source,\n      registro: {\n        ok,\n        registrado,\n        duplicado,\n        statusCode,\n        pagoId: data?.pagoId ?? data?.id ?? '',\n        respuestaApi: data,\n      },\n      confirmacion: {\n        destinatario: arr.email,\n        asunto: `Confirmación de pago - ${source.pago.referenciaIdempotencia}`,\n        html,\n      },\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -200
+      ],
+      "id": "d8d9a7d5-9f21-4af6-9e65-718a3a6b5502",
+      "name": "Validar registro del pago"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "fc6073da-d847-44a8-a2ea-6ff579b18162",
+              "leftValue": "={{ $json.registro.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1380,
+        -200
+      ],
+      "id": "8722fa39-35e0-46c8-9a64-4d16d44afb2d",
+      "name": "¿Pago registrado?"
+    },
+    {
+      "parameters": {
+        "authentication": "microsoftOutlookOAuth2Api",
+        "resource": "message",
+        "operation": "send",
+        "toRecipients": "={{ $json.config.correoInterno }}",
+        "subject": "=ALERTA: error al registrar pago conciliado",
+        "bodyContent": "={{ 'La conciliación fue positiva, pero la API no confirmó el registro.\\n\\n' + 'Arrendatario: ' + $json.conciliacion.arrendatario.nombre + '\\n' + 'Valor: ' + String($json.pago.valor) + ' COP\\n' + 'Referencia: ' + $json.pago.referenciaIdempotencia + '\\n' + 'Estado HTTP: ' + String($json.registro.statusCode) + '\\n' + 'Respuesta: ' + JSON.stringify($json.registro.respuestaApi) }}",
+        "additionalFields": {
+          "bodyContentType": "Text",
+          "importance": "High",
+          "saveToSentItems": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1640,
+        -40
+      ],
+      "id": "1cebbc59-95c2-45cb-abe5-33462ac274cb",
+      "name": "Alertar error de registro"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8b01f4b4-de2c-44a1-8847-85e7eebce322",
+              "leftValue": "={{ $json.registro.duplicado }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1640,
+        -280
+      ],
+      "id": "a06c22b6-3e83-45b5-a38e-8c96638b7ef6",
+      "name": "¿Registro duplicado?"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1900,
+        -180
+      ],
+      "id": "648cbe5c-9c03-4971-95ef-a43a4644c19c",
+      "name": "No reenviar confirmación duplicada"
+    },
+    {
+      "parameters": {
+        "authentication": "microsoftOutlookOAuth2Api",
+        "resource": "message",
+        "operation": "send",
+        "toRecipients": "={{ $json.confirmacion.destinatario }}",
+        "subject": "={{ $json.confirmacion.asunto }}",
+        "bodyContent": "={{ $json.confirmacion.html }}",
+        "additionalFields": {
+          "bodyContentType": "html",
+          "importance": "Normal",
+          "saveToSentItems": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        1900,
+        -380
+      ],
+      "id": "0291c7d6-8abf-4261-b06f-6499f1b66858",
+      "name": "Outlook: confirmar al arrendatario"
+    },
+    {
+      "parameters": {
+        "authentication": "microsoftOutlookOAuth2Api",
+        "resource": "message",
+        "operation": "update",
+        "messageId": {
+          "__rl": true,
+          "value": "={{ $('Extraer y validar notificación').item.json.correo.id }}",
+          "mode": "id"
+        },
+        "updateFields": {
+          "isRead": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        2180,
+        -120
+      ],
+      "id": "69a8b69c-0b9d-4fcb-bbd6-0016a0f0c20d",
+      "name": "Marcar correo como leído"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Outlook: nuevo correo": {
+      "main": [
+        [
+          {
+            "node": "Extraer y validar notificación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer y validar notificación": {
+      "main": [
+        [
+          {
+            "node": "¿Remitente bancario válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Remitente bancario válido?": {
+      "main": [
+        [
+          {
+            "node": "¿Datos mínimos completos?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descartar correo no bancario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Datos mínimos completos?": {
+      "main": [
+        [
+          {
+            "node": "API: buscar arrendatario",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alertar extracción incompleta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API: buscar arrendatario": {
+      "main": [
+        [
+          {
+            "node": "Evaluar conciliación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluar conciliación": {
+      "main": [
+        [
+          {
+            "node": "¿Coincide con arrendatario?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Coincide con arrendatario?": {
+      "main": [
+        [
+          {
+            "node": "API: registrar pago",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alertar pago sin coincidencia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API: registrar pago": {
+      "main": [
+        [
+          {
+            "node": "Validar registro del pago",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar registro del pago": {
+      "main": [
+        [
+          {
+            "node": "¿Pago registrado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Pago registrado?": {
+      "main": [
+        [
+          {
+            "node": "¿Registro duplicado?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alertar error de registro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Registro duplicado?": {
+      "main": [
+        [
+          {
+            "node": "No reenviar confirmación duplicada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Outlook: confirmar al arrendatario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alertar extracción incompleta": {
+      "main": [
+        [
+          {
+            "node": "Marcar correo como leído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alertar pago sin coincidencia": {
+      "main": [
+        [
+          {
+            "node": "Marcar correo como leído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alertar error de registro": {
+      "main": [
+        [
+          {
+            "node": "Marcar correo como leído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No reenviar confirmación duplicada": {
+      "main": [
+        [
+          {
+            "node": "Marcar correo como leído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outlook: confirmar al arrendatario": {
+      "main": [
+        [
+          {
+            "node": "Marcar correo como leído",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Bogota",
+    "saveManualExecutions": true
+  },
+  "versionId": "7ffdeabf-d1f8-405f-ba59-288d6386ed42",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}

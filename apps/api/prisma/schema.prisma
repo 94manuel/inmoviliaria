@@ -19,6 +19,20 @@ enum PropertyStatus {
   ARCHIVED
 }
 
+enum LeaseStatus {
+  ACTIVE
+  ENDED
+  PRENOTICE
+  LEGAL_REVIEW
+}
+
+enum LeasePartyRole {
+  CO_TENANT
+  GUARANTOR
+  AUTHORIZED_PAYER
+  OCCUPANT
+}
+
 enum InvoiceStatus {
   PENDING
   PAID
@@ -38,6 +52,31 @@ enum PaymentProvider {
   MOCK
   WOMPI
   CYBERVESTIGIO
+  BANCOLOMBIA_EMAIL
+  MANUAL
+}
+
+enum BankNotificationStatus {
+  RECEIVED
+  MATCHED
+  REVIEW_REQUIRED
+  REJECTED
+  DUPLICATE
+  ERROR
+}
+
+enum ImportBatchStatus {
+  PROCESSING
+  COMPLETED
+  COMPLETED_WITH_REVIEW
+  FAILED
+}
+
+enum ImportRecordStatus {
+  IMPORTED
+  REVIEW_REQUIRED
+  SKIPPED
+  ERROR
 }
 
 enum ChargeCatalogType {
@@ -57,48 +96,116 @@ enum StoredFilePurpose {
 }
 
 model User {
-  id            String           @id @default(cuid())
+  id            String       @id @default(cuid())
   name          String
-  email         String           @unique
+  email         String       @unique
   phone         String?
-  passwordHash  String
-  role          UserRole         @default(USER)
-  properties    Property[]       @relation("PropertyCreator")
-  newsPosts     NewsPost[]       @relation("NewsCreator")
+  passwordHash  String?
+  role          UserRole     @default(USER)
+  properties    Property[]   @relation("PropertyCreator")
+  newsPosts     NewsPost[]   @relation("NewsCreator")
   leases        Lease[]
   invoices      Invoice[]
   payments      Payment[]
-  storedFiles   StoredFile[]     @relation("StoredFileCreator")
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  tenantProfile Tenant?
+  storedFiles   StoredFile[] @relation("StoredFileCreator")
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Owner {
+  id             String          @id @default(cuid())
+  name           String
+  normalizedName String          @unique
+  documentNumber String?
+  email          String?
+  phone          String?
+  propertyLinks  PropertyOwner[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Tenant {
+  id             String        @id @default(cuid())
+  sourceKey      String?       @unique
+  name           String
+  normalizedName String
+  documentNumber String?
+  email          String?
+  phone          String?
+  userId         String?       @unique
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  leases         Lease[]
+  invoices       Invoice[]
+  payments       Payment[]
+  aliases        TenantAlias[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([normalizedName])
+  @@index([documentNumber])
+  @@index([email])
+}
+
+model TenantAlias {
+  id              String   @id @default(cuid())
+  tenantId        String
+  alias           String
+  normalizedAlias String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+
+  @@unique([tenantId, normalizedAlias])
+  @@index([normalizedAlias])
 }
 
 model Property {
-  id                String         @id @default(cuid())
+  id                String          @id @default(cuid())
+  legacyCode        String?         @unique
+  sourceSheet       String?
+  sourceRow         Int?
   title             String
-  slug              String         @unique
-  description       String
-  monthlyRent       Int
-  administrationFee Int            @default(0)
-  deposit           Int            @default(0)
-  city              String
-  neighborhood      String
+  slug              String          @unique
+  description       String          @default("")
+  monthlyRent       Int             @default(0)
+  administrationFee Int             @default(0)
+  deposit           Int             @default(0)
+  city              String          @default("Bogotá D.C.")
+  neighborhood      String          @default("")
+  locality          String          @default("")
   address           String
-  bedrooms          Int
-  bathrooms         Int
-  areaM2            Float
-  parking           Int            @default(0)
+  rawAddress        String?
+  bedrooms          Int             @default(0)
+  bathrooms         Int             @default(0)
+  areaM2            Float           @default(0)
+  parking           Int             @default(0)
   features          String[]
   tour360Url        String?
   videoUrl          String?
-  status            PropertyStatus @default(AVAILABLE)
-  published         Boolean        @default(true)
+  status            PropertyStatus  @default(AVAILABLE)
+  published         Boolean         @default(true)
   images            PropertyImage[]
   leases            Lease[]
+  ownerLinks        PropertyOwner[]
   createdById       String
-  createdBy         User           @relation("PropertyCreator", fields: [createdById], references: [id])
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdBy         User            @relation("PropertyCreator", fields: [createdById], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([status, city])
+}
+
+model PropertyOwner {
+  propertyId            String
+  ownerId               String
+  monthlyExpectedPayout Int?
+  source                String?
+  property              Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  owner                 Owner    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@id([propertyId, ownerId])
 }
 
 model PropertyImage {
@@ -128,35 +235,114 @@ model StoredFile {
 }
 
 model Lease {
-  id         String    @id @default(cuid())
-  propertyId String
-  userId     String
-  startDate  DateTime
-  endDate    DateTime
-  active     Boolean   @default(true)
-  property   Property  @relation(fields: [propertyId], references: [id])
-  user       User      @relation(fields: [userId], references: [id])
-  invoices   Invoice[]
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id                     String                    @id @default(cuid())
+  legacyCode             String?                   @unique
+  sourceSheet            String?
+  sourceRow              Int?
+  propertyId             String
+  tenantId               String?
+  userId                 String?
+  startDate              DateTime?
+  endDate                DateTime?
+  active                 Boolean                   @default(true)
+  status                 LeaseStatus               @default(ACTIVE)
+  expectedMonthlyPayment Int?
+  ownerExpectedPayout    Int?
+  rawContractData        String?
+  rawCoTenants           String?
+  novelty                String?
+  observations           String?
+  property               Property                  @relation(fields: [propertyId], references: [id])
+  tenant                 Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user                   User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  invoices               Invoice[]
+  parties                LeaseParty[]
+  payerAliases           LeasePayerAlias[]
+  receivingAccounts      LeaseReceivingAccount[]
+  bankNotifications      BankPaymentNotification[]
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  @@index([active, status])
+  @@index([expectedMonthlyPayment])
+}
+
+model LeaseParty {
+  id             String         @id @default(cuid())
+  leaseId        String
+  role           LeasePartyRole
+  name           String
+  normalizedName String
+  documentNumber String?
+  email          String?
+  phone          String?
+  rawData        String?
+  lease          Lease          @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  createdAt      DateTime       @default(now())
+
+  @@index([leaseId, role])
+  @@index([normalizedName])
+}
+
+model LeasePayerAlias {
+  id              String   @id @default(cuid())
+  leaseId         String
+  alias           String
+  normalizedAlias String
+  lease           Lease    @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+
+  @@unique([leaseId, normalizedAlias])
+  @@index([normalizedAlias])
+}
+
+model ReceivingBankAccount {
+  id            String                    @id @default(cuid())
+  bank          String                    @default("Bancolombia")
+  label         String
+  accountLast4  String
+  active        Boolean                   @default(true)
+  leaseLinks    LeaseReceivingAccount[]
+  notifications BankPaymentNotification[]
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  @@unique([bank, accountLast4])
+}
+
+model LeaseReceivingAccount {
+  leaseId   String
+  accountId String
+  active    Boolean              @default(true)
+  lease     Lease                @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  account   ReceivingBankAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt DateTime             @default(now())
+
+  @@id([leaseId, accountId])
 }
 
 model Invoice {
-  id          String        @id @default(cuid())
-  code        String        @unique
-  period      DateTime
-  dueDate     DateTime
-  amount      Int
-  status      InvoiceStatus @default(PENDING)
-  paidAt      DateTime?
-  leaseId     String
-  userId      String
-  lease       Lease         @relation(fields: [leaseId], references: [id])
-  user        User          @relation(fields: [userId], references: [id])
-  lineItems   InvoiceLineItem[]
-  payments    Payment[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                String                    @id @default(cuid())
+  code              String                    @unique
+  period            DateTime
+  dueDate           DateTime
+  amount            Int
+  status            InvoiceStatus             @default(PENDING)
+  paidAt            DateTime?
+  leaseId           String
+  tenantId          String?
+  userId            String?
+  lease             Lease                     @relation(fields: [leaseId], references: [id])
+  tenant            Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user              User?                     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  lineItems         InvoiceLineItem[]
+  payments          Payment[]
+  bankNotifications BankPaymentNotification[]
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  @@index([status, dueDate])
+  @@index([tenantId, period])
 }
 
 model ChargeCatalogItem {
@@ -186,20 +372,91 @@ model InvoiceLineItem {
 }
 
 model Payment {
-  id          String          @id @default(cuid())
-  reference   String          @unique
-  amount      Int
-  currency    String          @default("COP")
-  provider    PaymentProvider
-  status      PaymentStatus   @default(PENDING)
-  externalId  String?
-  checkoutUrl String?
-  invoiceId   String
-  userId      String
-  invoice     Invoice         @relation(fields: [invoiceId], references: [id])
-  user        User            @relation(fields: [userId], references: [id])
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id                  String                   @id @default(cuid())
+  reference           String                   @unique
+  amount              Int
+  currency            String                   @default("COP")
+  provider            PaymentProvider
+  status              PaymentStatus            @default(PENDING)
+  externalId          String?
+  checkoutUrl         String?
+  payerName           String?
+  payerNameNormalized String?
+  bankAccountLast4    String?
+  bankReference       String?
+  invoiceId           String
+  tenantId            String?
+  userId              String?
+  invoice             Invoice                  @relation(fields: [invoiceId], references: [id])
+  tenant              Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user                User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  bankNotification    BankPaymentNotification?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+
+  @@index([invoiceId, status])
+  @@index([bankReference])
+}
+
+model BankPaymentNotification {
+  id                  String                 @id @default(cuid())
+  outlookMessageId    String                 @unique
+  internetMessageId   String?
+  sender              String
+  subject             String
+  payerName           String?
+  payerNameNormalized String?
+  amount              Int?
+  currency            String                 @default("COP")
+  accountLast4        String?
+  bankReference       String?
+  receivedAt          DateTime
+  status              BankNotificationStatus @default(RECEIVED)
+  reviewReason        String?
+  rawPayload          Json?
+  accountId           String?
+  matchedLeaseId      String?
+  matchedInvoiceId    String?
+  paymentId           String?                @unique
+  account             ReceivingBankAccount?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  matchedLease        Lease?                 @relation(fields: [matchedLeaseId], references: [id], onDelete: SetNull)
+  matchedInvoice      Invoice?               @relation(fields: [matchedInvoiceId], references: [id], onDelete: SetNull)
+  payment             Payment?               @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([status, receivedAt])
+  @@index([payerNameNormalized, amount])
+}
+
+model ImportBatch {
+  id           String            @id @default(cuid())
+  sourceFile   String
+  checksum     String            @unique
+  status       ImportBatchStatus @default(PROCESSING)
+  totalRows    Int               @default(0)
+  importedRows Int               @default(0)
+  reviewRows   Int               @default(0)
+  errorMessage String?
+  records      ImportRecord[]
+  startedAt    DateTime          @default(now())
+  finishedAt   DateTime?
+}
+
+model ImportRecord {
+  id           String             @id @default(cuid())
+  batchId      String
+  sourceSheet  String
+  sourceRow    Int
+  legacyCode   String?
+  status       ImportRecordStatus
+  entityId     String?
+  reviewReason String?
+  payload      Json
+  batch        ImportBatch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  createdAt    DateTime           @default(now())
+
+  @@unique([batchId, sourceSheet, sourceRow])
 }
 
 model ContactMessage {

@@ -13,7 +13,8 @@
     "db:migrate": "dotenv -e .env -- npm run db:migrate -w @inmobiliaria/api",
     "db:seed": "dotenv -e .env -- npm run db:seed -w @inmobiliaria/api",
     "docker:up": "docker compose up --build",
-    "docker:down": "docker compose down -v"
+    "docker:down": "docker compose down -v",
+    "db:import:arrendamientos": "dotenv -e .env -- npm run import:arrendamientos -w @inmobiliaria/api"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

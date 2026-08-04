@@ -76,7 +76,7 @@ export function AdminInvoiceForm({
   return (
     <form className="form card adminForm" action={action}>
       <h2>Generar factura</h2>
-      <label>Contrato<select name="leaseId" required><option value="">Seleccione</option>{leases.map((lease) => <option value={lease.id} key={lease.id}>{lease.user.name} — {lease.property.title}</option>)}</select></label>
+      <label>Contrato<select name="leaseId" required><option value="">Seleccione</option>{leases.map((lease) => <option value={lease.id} key={lease.id}>{lease.user?.name ?? lease.tenant?.name ?? 'Sin arrendatario'} — {lease.property.title}</option>)}</select></label>
       <div className="twoCols"><label>Periodo<input type="date" name="period" required /></label><label>Vencimiento<input type="date" name="dueDate" required /></label></div>
 
       <div className="card" style={{ padding: 16 }}>

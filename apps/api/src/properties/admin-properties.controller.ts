@@ -51,8 +51,8 @@ export class AdminPropertiesController {
   }
 
   @Delete(':id')
-  archive(@Param('id') id: string) {
-    return this.properties.archive(id);
+  remove(@Param('id') id: string) {
+    return this.properties.remove(id);
   }
 
   private validateImages(files: Express.Multer.File[], required = false): void {
